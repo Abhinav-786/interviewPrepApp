@@ -1,0 +1,112 @@
+[
+  {
+    "id": "post_1783727205624_4l5ez",
+    "url": "https://www.linkedin.com/posts/sri-harish-chintha-074a5a2b1_sdet-45-to-6-years-can-you-answer-activity-7345277272783732737-L233/?utm_source=share&utm_medium=member_android&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "Unknown Author",
+    "content": "1. Please introduce yourself.\n2. Please explain your Automation Framework, all the components.\n3. What is a Page Object Model?\n4. How do you run your test cases in parallel in Cucumber?\n5. Explain the contents of the Runner File in Cucumber?\n6. What is a Singleton Design Pattern?\n7. What are the advantages and disadvantages of the Page Object Model?\n8. What is Selenium Grid?\n9. Explain the WebDriver create statement line?\n10. Explain the Maven Lifecycle?\n11. How do you run the failed test cases?\n12. How do you generate Reports in Selenium?\n13. How do you customise reports after your test execution?\n14. What kind of waits are there in Selenium?\n15. Write the Code Snippet for Explicit Wait?\n16. Write the Code Snippet for Drag and Drop in Selenium?\n17. How do you switch to different Windows in Selenium?\n18. Why do we use SET in Window Handles?\n19. Write the Code for taking screenshot in Selenium?\n20. What is the difference between Scenario and Scenario Outline in Cucumber?\n21. How do you pass data to your Selenium Scripts?\n22. How do you decide the priorities of your Test Cases?\n23. If you want to execute one test case again and again how do you do that?\n24. What are the different annotations used in TestNG?\n25. Write the hierarchy of annotations in TestNG?\n26. What is the defect life cycle?\n27. What is the difference between Agile and Waterfall Model?\n28. What is the difference between 201 and 204 Status Code?\n29. What is the difference between 401 and 403 Status Code?\n30. What are the components of an API Request?\n31. What is the difference between Query Parameters and Path Parameters?\n32. How do you resolve Conflicts in Git?\n33. What is the difference between git pull and git patch?\n34. Explain the use of Jenkins in the Automation Framework?",
+    "tags": [
+      "Behavioral",
+      "Automation",
+      "Selenium",
+      "Cucumber",
+      "Java",
+      "Maven",
+      "TestNG",
+      "Manual",
+      "API Testing",
+      "Git",
+      "Jenkins",
+      "CI/CD"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:46:45.624Z"
+  },
+  {
+    "id": "post_1783727003798_tb76q",
+    "url": "https://www.linkedin.com/posts/krishna-kumari-52baa4323_cognizant-cts-automationtesting-activity-7342000810941153280-e6uc/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "Cognizant",
+    "content": "Round 1: Technical & Automation Testing Questions\n1. Introduce yourself.\n2. How can you execute Selenium test cases on a remote machine?\n3. How do you pass the browser name as an argument from a Jenkins file to a Cucumber step definition?\n4. Which TestNG listeners have you used in your automation framework?\n5. In Cucumber, how can you ensure that a specific piece of code runs only before the first scenario in a feature file?\n6. Given an array {6, 8, 11, 6, 7, 18} and a target sum of 17, write a program to find the indices of any two elements whose sum equals the target.\n7. What is the purpose of interfaces in Java? Provide examples of how you have implemented them in your test automation framework.\n8. Write an XPath expression to locate the label named \"Senior Citizen\" on the SpiceJet UI.\n9. How do you integrate and execute your Selenium tests in a CI/CD pipeline?\n10. What approach would you take to identify and validate broken links on a web page?\n\nRound 2: Advanced Java, REST API, and Testing Concepts\n1. Explain the static keyword in Java and its primary use cases.\n2. What is the purpose of a constructor in Java? How does it differ from a method?\n3. Write a Java program to determine the most frequently occurring character and the least frequently occurring character in a given string.\n4. Write an XPath expression to locate a specific cell in a web table based on the value of a neighboring cell.\n5. A particular text can appear in any cell within a web table. How would you locate it dynamically?\n6. What is dependency injection in Rest Assured? How does it enhance API testing?\n7. Explain the difference between HTTP 401 (Unauthorized) and HTTP 403 (Forbidden) status codes.",
+    "tags": [
+      "Selenium",
+      "Automation",
+      "TestNG",
+      "Jenkins",
+      "CI/CD",
+      "Java",
+      "Coding",
+      "API Testing",
+      "Rest Assured",
+      "Cucumber",
+      "XPath"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:43:23.798Z"
+  },
+  {
+    "id": "post_1783726570876_762kp",
+    "url": "https://www.linkedin.com/posts/vaishali-mehta-test_publicissapient-activity-7350441144087986176-TcC0/?utm_source=share&utm_medium=member_android&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "Publicis Sapient",
+    "content": "1️⃣ First round: Duration 1 hour\n1. Does Map supports null keys?\n2. Can we use declare constructor static in java?\n3. Can we override and overload static methods in java?\n4. Can we create public static final variables in java?\n5. How to call constructors of other classes and same class in this class?\n6. Why do we use constructors in selenium?\n7. How can we run test method and test class multiple times like 100 times?\n8. Does priority in TestNG will have negative values and 0 value?\n9. Parameterized testing in TestNG?\n10. @BeforeTest and @BeforeClass difference?\n11. How to write Data Provider in TestNG?\n12. Groups in TestNG?\n13. Different waits in Selenium and their usage?\n14. OOPS concept in java and usage in Selenium?\n15. Can Constructor be private?\n16. You have 2 interfaces and you declared 4 methods in 1st interface and 2 methods in 2nd interface and now you are implementing those 2 interfaces in your class, you would want to implement only few declared methods from those 2 interfaces so how you deal with this?\n17. Coding ➡️ HashMap sorting using keys where it contains one null key \n18. Coding ➡️ We have 3 stairs need to find number of possibilities to reach the 3rd stair from ground using java.\n19. Git commands\n 🔸 Git push origin feature-branch (Is this correct command and why?)\n 🔸 Git stashing\n 🔸 Git cherry pick\n 🔸 Git branching\n20. Parallel Execution in Selenium?\n21. How to execute selenium tests in Jenkins?\n\n2️⃣ Second Round: Duration 50 min\n1. Selenium Framework explanation\n2. How to handle dynamic dropdowns in selenium?\n3. Can we automate CAPTCHA?\n4. Explain Exceptions hierarchy in java?\n5. Difference between driver.get() and driver.navigateTo() methods?\n6. Parameterization in TestNG?\n7. How to connect Maven and TestNG?\n8. What are streams in java and their usage?\n9. How to work with configuration files in selenium framework?\n10. Difference between Page Object Model (POM) and Page Factory? How Page factory implementing lazy initialization and how we can do same in POM?\n11. What is the hierarchy of TestNG annotations?\n12. How to run failed tests again in TestNG?\n\n3️⃣ Third Round: Duration 45 min\n1. Open \"Crick buzz\" website and get the 6's count of player by giving player name in Xpath? \n2. Actions class questions like how to perform keyboard actions using Actions class?\n3. How to perform control click operation using actions class?\n4. How to perform file upload operation in selenium and write code for it?\n5. Write code for taking screenshot?\n6. What are listeners and write code for it\n7. Manual API testing questions like status codes and http methods and difference between put and patch",
+    "tags": [
+      "Java",
+      "Selenium",
+      "TestNG",
+      "Git",
+      "Jenkins",
+      "Maven",
+      "API Testing",
+      "Manual",
+      "Coding"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:36:10.876Z"
+  },
+  {
+    "id": "post_1783726467181_lq2pf",
+    "url": "https://www.linkedin.com/posts/arjun-agarwal-a8a1141b3_pwc-activity-7358444186754289664-u2oe/?utm_source=share&utm_medium=member_android&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "PwC",
+    "content": "Round 2: Technical Round (60 minutes)\n1. How would you design a scalable Selenium automation framework using Java and TestNG?\n2. How do you handle dynamic web elements that change IDs every time the page loads?\n3. Explain the Page Object Model (POM). Can you write a sample class for a login page?\n4. How do you manage test execution across different browsers and environments?\n5. What is your approach for running parallel test cases using TestNG?\n6. How do you capture screenshots for failed test cases and attach them to Extent Reports?\n7. Can you automate file upload/download scenarios using Selenium?\n8. How do you perform API testing? Have you worked with Rest Assured or Postman automation?\n9. What are the different waits in Selenium? When would you use each one?\n10. How do you handle alerts, popups, and iframe elements during automation?\n11. How do you validate a JSON response from an API in Java?\n12. What’s the difference between Jenkins freestyle job and pipeline?\n13. Can you write a Java program to reverse a string or check for a palindrome?\n14. What’s your approach to debugging flaky or intermittent test failures?\n15. How do you integrate your automation suite with CI tools like Jenkins or GitHub Actions?\n16. Explain your experience with data-driven testing using Excel/CSV/JSON files.\n17. How do you ensure your test scripts are maintainable and reusable in the long run?\n\nRound 3: Behavioral Round\n1. Can you share a time when your automation test suite helped prevent a production issue?\n2. What would you do if you had to automate a new tool or application you’ve never worked on before?\n3. Describe a situation when you had very limited time to test a critical feature. How did you manage it?\n4. Tell me about a mistake you made in testing. What did you learn from it?\n5. How do you handle situations when developers reject a bug you raised as “not reproducible”?\n6. Have you ever convinced your team to adopt a new automation tool or process? How did you do it?",
+    "tags": [
+      "Java",
+      "Selenium",
+      "Automation",
+      "API Testing",
+      "Rest Assured",
+      "Behavioral",
+      "TestNG",
+      "Jenkins",
+      "CI/CD"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:34:27.181Z"
+  },
+  {
+    "id": "post_1783725610130_oerys",
+    "url": "https://www.linkedin.com/posts/kanchan-kapoor-a5459391_deloitte-activity-7447954288435249155-Wod5/?utm_source=share&utm_medium=member_android&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "Deloitte",
+    "content": "**Manual Testing:**\n• Explain your current project and responsibilities.\n• Severity vs Priority with examples.\n• What is STLC?\n• Test case vs Test scenario.\n• Bug life cycle.\n• Negative test cases for Login.\n• Scenarios for Login, Payment, Search & Filter.\n• How to handle non-reproducible bugs.\n• How to handle bugs found in production.\n• How to decide test coverage when time is limited.\n\n**Automation (Selenium + Java + Rest Assured):**\n• Implicit vs Explicit wait.\n• WebDriverWait and its usage.\n• Handling multiple browser windows.\n• Dynamic XPath for Amazon product ratings.\n• Types of locators & preferred ones.\n• What is POM and why it is used?\n• Handling stale element issues.\n\n**Java:**\n• Interface vs Abstract class.\n• OOPs concepts with framework examples.\n• String immutability.\n• Coding tasks:\n  • Second most repeating character.\n  • Move vowels to the left, consonants in the middle, special chars to the right.\n  • Reverse string without built-in methods.\n• Checked vs Unchecked exceptions.\n\n**API Testing (Rest Assured):**\n• Common HTTP status codes.\n• GET vs POST vs PUT vs PATCH.\n• Basic Rest Assured script for request + status validation.\n\n**Git:**\n• Merge vs Rebase.\n• Pull vs Fetch.\n• Handling merge conflicts.\n• Steps to commit and push.",
+    "tags": [
+      "Java",
+      "Selenium",
+      "Manual",
+      "API Testing",
+      "Rest Assured",
+      "Git"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:20:10.130Z"
+  },
+  {
+    "id": "post_1783725191804_u8c4f",
+    "url": "https://www.linkedin.com/posts/krishna-kumari-52baa4323_barclays-activity-7478439888351035392-Gexb/?utm_source=share&utm_medium=member_android&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "barclays",
+    "content": "1. What are the differences between `findElement()` and `findElements()`?\n2. How do you handle dynamic web elements in Selenium?\n3. Explain different types of waits used in Selenium.\n4. What’s the difference between XPath and CSS Selector?\n5. How do you handle multiple windows/tabs in Selenium?\n6. How do you design a Page Object Model (POM) framework?\n7. What is the use of `final`, `static`, and `this` keywords in Java?\n8. Explain Collection Framework — where have you used `HashMap` or `ArrayList` in your automation?\n9. How do you handle exceptions in Selenium scripts?\n10. What’s your approach to data-driven testing using TestNG or Excel?\n11. Walk me through your automation framework architecture.\n12. How do you manage test data and environment configurations?\n13. What are your best practices to make automation scripts more maintainable?\n14. How do you handle failed test cases in Jenkins or CI/CD pipelines?\n15. What’s your strategy for flaky test handling?\n16. How do you decide which test cases to automate?\n17. Explain your Git branching strategy or version control workflow.\n18. How do you integrate API testing in your automation framework?\n19. What are common challenges you faced in automation and how did you resolve them?\n20. Have you worked with parallel execution or cross-browser testing tools?\n21. Tell me about a time you identified a critical bug through automation.\n22. How do you ensure test coverage and quality metrics?\n23. Describe a challenging situation with developers or deadlines and how you handled it.\n24. Why do you want to join Barclays?\n25. Where do you see yourself in the next 2–3 years?",
+    "tags": [
+      "Java",
+      "Selenium",
+      "Automation"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-10T23:13:11.804Z"
+  }
+]
