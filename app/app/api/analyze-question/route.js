@@ -1,26 +1,36 @@
 import OpenAI from 'openai';
 
-const DEFAULT_API_KEY = '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';
+/**
+ * /api/analyze-question
+ * 
+ * Uses NVIDIA NIM API (via OpenAI-compatible SDK) to verify or generate
+ * technical interview answers for the Progress Tracker.
+ * API key is managed server-side via NVIDIA_API_KEY env variable.
+ */
+
 const BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const DEFAULT_MODEL = 'meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL = 'z-ai/glm-5.2';
+
+function getClient() {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured on the server.');
+  return new OpenAI({ apiKey, baseURL: BASE_URL });
+}
 
 export async function POST(request) {
   try {
-    const { question, answer, apiKey } = await request.json();
+    const { question, answer } = await request.json();
 
     if (!question || !question.trim()) {
       return Response.json({ error: 'No question text provided' }, { status: 400 });
     }
 
-    const key = apiKey?.trim() || process.env.NVIDIA_API_KEY || DEFAULT_API_KEY;
-    if (!key) {
-      return Response.json({ error: 'Missing API Key.' }, { status: 400 });
+    let openai;
+    try {
+      openai = getClient();
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
     }
-
-    const openai = new OpenAI({
-      apiKey: key,
-      baseURL: BASE_URL,
-    });
 
     let prompt = '';
     const cleanAnswer = (answer || '').trim();

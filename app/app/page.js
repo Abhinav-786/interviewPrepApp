@@ -279,7 +279,6 @@ function TrackerTaskModal({ task, onClose, onUpdate, tags, nvidiaKeyProp, showTo
         body: JSON.stringify({
           question: text,
           answer: notes,
-          apiKey: nvidiaKeyProp,
         })
       });
       const data = await res.json();
@@ -573,7 +572,6 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content,
-          apiKey: nvidiaKey,
           availableTags: tags
         })
       });
@@ -1104,6 +1102,7 @@ export default function Home() {
   const [nvidiaKey, setNvidiaKey] = useState('');
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState('dark');
+  const [boardsLoaded, setBoardsLoaded] = useState(false);
 
   function toggleTheme() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -1238,47 +1237,66 @@ export default function Home() {
     }).catch(err => console.error('Save tags error:', err));
   }, [tags, mounted]);
 
-  // Load tracker boards from localStorage on mount (and handle legacy migration)
+  // Load tracker boards from project file (data/boards.json) on mount
   useEffect(() => {
     if (!mounted) return;
-    if (typeof window !== 'undefined') {
-      try {
-        const savedBoards = localStorage.getItem('interviewprep_boards');
-        if (savedBoards) {
-          const boards = JSON.parse(savedBoards);
-          setTrackerBoards(boards);
-          if (boards.length > 0) {
-            // Find active board or default to first one
-            const hasDefault = boards.some(b => b.id === activeBoardId);
-            if (!hasDefault) {
-              setActiveBoardId(boards[0].id);
+
+    fetch('/api/boards')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Failed to load boards');
+
+        let boards = data.boards || [];
+
+        // Migration: if server only has the empty default board, check localStorage
+        const isEmptyDefault = boards.length === 1 && boards[0].id === 'default' && boards[0].questions.length === 0;
+        if (isEmptyDefault && typeof window !== 'undefined') {
+          try {
+            const lsBoards = localStorage.getItem('interviewprep_boards');
+            if (lsBoards) {
+              const parsed = JSON.parse(lsBoards);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                boards = parsed;
+                // Migrate: save to project file
+                fetch('/api/boards', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ boards })
+                }).catch(err => console.error('Board migration save error:', err));
+                localStorage.removeItem('interviewprep_boards');
+                console.log('Migrated tracker boards from localStorage to data/boards.json');
+              }
             }
+          } catch (e) {
+            console.error('Board localStorage migration failed:', e);
           }
-        } else {
-          // Check for legacy single-board questions
-          const savedLegacy = localStorage.getItem('interviewprep_tracker_questions');
-          const legacyQuestions = savedLegacy ? JSON.parse(savedLegacy) : [];
-          const defaultBoard = {
-            id: 'default',
-            name: 'General Prep',
-            questions: legacyQuestions
-          };
-          setTrackerBoards([defaultBoard]);
-          setActiveBoardId('default');
         }
-      } catch (e) {
-        console.error('Failed to load tracker boards:', e);
-      }
-    }
+
+        setTrackerBoards(boards);
+        if (boards.length > 0) {
+          const hasActive = boards.some(b => b.id === activeBoardId);
+          if (!hasActive) setActiveBoardId(boards[0].id);
+        }
+
+        // Mark boards as loaded so the save effect can run
+        setBoardsLoaded(true);
+      })
+      .catch(err => {
+        console.error('Failed to load tracker boards:', err);
+        // Even on error, allow saves to work
+        setBoardsLoaded(true);
+      });
   }, [mounted]);
 
-  // Save tracker boards to localStorage on update
+  // Save tracker boards to project file whenever they change
   useEffect(() => {
-    if (!mounted) return;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('interviewprep_boards', JSON.stringify(trackerBoards));
-    }
-  }, [trackerBoards, mounted]);
+    if (!mounted || !boardsLoaded) return;
+    fetch('/api/boards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boards: trackerBoards })
+    }).catch(err => console.error('Save boards error:', err));
+  }, [trackerBoards, mounted, boardsLoaded]);
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
@@ -1371,7 +1389,6 @@ export default function Home() {
         body: JSON.stringify({
           content: contentToConsolidate,
           topics: prepSelectedTags.join(', ') || cleanKeywords,
-          apiKey: nvidiaKey
         })
       });
 
@@ -1434,7 +1451,6 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           questionsToPolish: parsed.map(q => q.text),
-          apiKey: nvidiaKey,
         })
       });
       const data = await res.json();
@@ -1650,31 +1666,39 @@ export default function Home() {
               gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
               gap: 16 
             }}>
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ fontSize: 28 }}>🏢</div>
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">🏢</div>
                 <div>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Target Companies</span>
-                  <strong style={{ fontSize: 20, color: 'var(--text-primary)' }}>
+                  <span className="dashboard-stat-label">Target Companies</span>
+                  <div className="dashboard-stat-value">
                     {new Set(posts.map(p => p.author.toLowerCase().trim())).size}
-                  </strong>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ fontSize: 28 }}>📰</div>
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">📰</div>
                 <div>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Resource Posts</span>
-                  <strong style={{ fontSize: 20, color: 'var(--text-primary)' }}>{posts.length}</strong>
+                  <span className="dashboard-stat-label">Resource Posts</span>
+                  <div className="dashboard-stat-value">{posts.length}</div>
                 </div>
               </div>
 
-              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ fontSize: 28 }}>❓</div>
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">❓</div>
                 <div>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Extracted Questions</span>
-                  <strong style={{ fontSize: 20, color: 'var(--text-primary)' }}>
+                  <span className="dashboard-stat-label">Extracted Questions</span>
+                  <div className="dashboard-stat-value">
                     {posts.reduce((sum, p) => sum + (p.questions?.length || 0), 0)}
-                  </strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">📅</div>
+                <div>
+                  <span className="dashboard-stat-label">Study Boards</span>
+                  <div className="dashboard-stat-value">{trackerBoards.filter(b => b.questions.length > 0).length}</div>
                 </div>
               </div>
             </div>
@@ -1682,20 +1706,12 @@ export default function Home() {
             {/* Progress & Charts Section */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', 
               gap: 20 
             }}>
               {/* Overall Progress Tracker Summary */}
-              <div style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16
-              }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>📊 Overall Study Progress</h3>
+              <div className="dashboard-section">
+                <h3 className="dashboard-section-title">📊 Overall Study Progress</h3>
                 
                 {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -1771,16 +1787,8 @@ export default function Home() {
               </div>
 
               {/* Topic Distribution Chart */}
-              <div style={{
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16
-              }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>🏷️ Top Study Categories</h3>
+              <div className="dashboard-section">
+                <h3 className="dashboard-section-title">🏷️ Top Study Categories</h3>
                 
                 {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
@@ -1825,57 +1833,61 @@ export default function Home() {
             </div>
 
             {/* Target Study Boards Completion Progress */}
-            <div style={{
-              background: 'var(--bg-card)',
-              border: '1px solid var(--border)',
-              borderRadius: '12px',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16
-            }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>📂 Active Study Boards Readiness</h3>
+            <div className="dashboard-section">
+              <h3 className="dashboard-section-title">📂 Active Study Boards Readiness</h3>
 
-              {trackerBoards.length === 0 || (trackerBoards.length === 1 && trackerBoards[0].id === 'default' && trackerBoards[0].questions.length === 0) ? (
-                <div style={{ textAlign: 'center', padding: '20px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
-                  No study boards created yet. Start tracking a guide to create one!
+              {trackerBoards.filter(b => b.questions.length > 0).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>🎯</div>
+                  No study boards created yet. Use <strong>Prep Generator</strong> → <strong>Track Study Progress</strong> to create your first board!
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
-                  {trackerBoards.map(board => {
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+                  {trackerBoards.filter(b => b.questions.length > 0).map(board => {
                     const total = board.questions.length;
                     const done = board.questions.filter(q => q.status === 'Done').length;
+                    const inProgress = board.questions.filter(q => q.status === 'In Progress').length;
                     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                     return (
                       <div 
                         key={board.id} 
-                        style={{ 
-                          border: '1px solid var(--border)', 
-                          borderRadius: 8, 
-                          padding: 16, 
-                          background: 'rgba(0,0,0,0.1)',
-                          cursor: 'pointer',
-                          transition: 'var(--transition)'
-                        }}
+                        className="dashboard-board-card"
                         onClick={() => {
                           setActiveBoardId(board.id);
                           setActiveTab('tracker');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
-                        onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 700, fontSize: 13 }}>📂 {board.name}</span>
-                          <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: 4 }}>
-                            {total} questions
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start' }}>
+                          <span style={{ fontWeight: 700, fontSize: 14 }}>📂 {board.name}</span>
+                          <span style={{ 
+                            fontSize: 11, 
+                            background: pct === 100 ? 'var(--accent-green-dim)' : 'rgba(255,255,255,0.06)', 
+                            color: pct === 100 ? 'var(--accent-green)' : 'var(--text-muted)',
+                            padding: '2px 8px', 
+                            borderRadius: 99,
+                            fontWeight: 600
+                          }}>
+                            {pct === 100 ? '✅ Complete' : `${pct}%`}
                           </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                          <span>Readiness Tracker</span>
-                          <span>{pct}%</span>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+                          <span>{total} questions</span>
+                          <span>·</span>
+                          <span style={{ color: 'var(--accent-amber)' }}>{inProgress} in progress</span>
+                          <span>·</span>
+                          <span style={{ color: 'var(--accent-green)' }}>{done} done</span>
                         </div>
-                        <div style={{ background: 'var(--border)', height: 6, borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent-green)', borderRadius: 3 }} />
+                        <div style={{ background: 'var(--border)', height: 5, borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ 
+                            width: `${pct}%`, 
+                            height: '100%', 
+                            background: pct === 100 
+                              ? 'var(--accent-green)' 
+                              : 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))', 
+                            borderRadius: 3,
+                            transition: 'width 0.4s ease'
+                          }} />
                         </div>
                       </div>
                     );
@@ -2276,9 +2288,10 @@ export default function Home() {
 
         {activeTab === 'tracker' && (
           <div className="tracker-container">
-            {/* Boards Sub-tabs */}
+            {/* Boards Sub-tabs + Actions row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
                 {trackerBoards.map(board => (
                   <div 
                     key={board.id} 
@@ -2297,9 +2310,9 @@ export default function Home() {
                     onClick={() => setActiveBoardId(board.id)}
                   >
                     <span style={{ fontSize: 13, fontWeight: 600, color: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
-                      📂 {board.name}
+                      {board.name}
                     </span>
-                    <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.06)', padding: '1px 6px', borderRadius: '4px', color: 'var(--text-muted)' }}>
+                    <span style={{ fontSize: 11, background: activeBoardId === board.id ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.06)', padding: '1px 7px', borderRadius: '99px', color: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>
                       {board.questions.length}
                     </span>
                     {board.id !== 'default' && (
@@ -2314,6 +2327,7 @@ export default function Home() {
                           }
                         }}
                         title="Delete Board"
+                        aria-label={`Delete board ${board.name}`}
                       >
                         ✕
                       </button>
@@ -2321,46 +2335,19 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  const name = prompt('Enter a name for the new Study Board:');
-                  if (name && name.trim()) {
-                    const newBoard = {
-                      id: `board_${Date.now()}`,
-                      name: name.trim(),
-                      questions: []
-                    };
-                    setTrackerBoards(prev => [...prev, newBoard]);
-                    setActiveBoardId(newBoard.id);
-                  }
-                }}
-              >
-                ➕ New Board
-              </button>
-            </div>
 
-            <div className="tracker-header">
-              <div>
-                <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>
-                  🎯 Study Progress Tracker: {activeBoard?.name || 'General Prep'}
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  Track your study progress for each question. Move them between columns as you prepare.
-                </p>
-              </div>
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowAddQuestionInline(!showAddQuestionInline)}
+                  aria-label="Add a question manually"
+                >
+                  {showAddQuestionInline ? '✕ Close' : '+ Add Question'}
+                </button>
 
-              {activeQuestions.length > 0 && (
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setShowAddQuestionInline(!showAddQuestionInline)}
-                  >
-                    {showAddQuestionInline ? '✕ Close Form' : '➕ Add Question'}
-                  </button>
+                {activeQuestions.length > 0 && (
                   <button
                     type="button"
                     className="btn btn-danger btn-sm"
@@ -2369,11 +2356,31 @@ export default function Home() {
                         updateActiveBoardQuestions([]);
                       }
                     }}
+                    aria-label="Reset board — clear all questions"
                   >
                     🗑 Reset Board
                   </button>
-                </div>
-              )}
+                )}
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    const name = prompt('Enter a name for the new Study Board:');
+                    if (name && name.trim()) {
+                      const newBoard = {
+                        id: `board_${Date.now()}`,
+                        name: name.trim(),
+                        questions: []
+                      };
+                      setTrackerBoards(prev => [...prev, newBoard]);
+                      setActiveBoardId(newBoard.id);
+                    }
+                  }}
+                >
+                  ＋ New Board
+                </button>
+              </div>
             </div>
 
             {/* Progress stats bar */}
@@ -2565,6 +2572,7 @@ export default function Home() {
                                     <button
                                       type="button"
                                       className="tracker-action-btn"
+                                      aria-label="Start studying — move to In Progress"
                                       onClick={() => {
                                         updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'In Progress' } : item));
                                       }}
@@ -2579,6 +2587,7 @@ export default function Home() {
                                       <button
                                         type="button"
                                         className="tracker-action-btn"
+                                        aria-label="Move back to To Do"
                                         onClick={() => {
                                           updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'To Do' } : item));
                                         }}
@@ -2589,6 +2598,7 @@ export default function Home() {
                                       <button
                                         type="button"
                                         className="tracker-action-btn"
+                                        aria-label="Mark as Done"
                                         onClick={() => {
                                           updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'Done' } : item));
                                         }}
@@ -2603,6 +2613,7 @@ export default function Home() {
                                     <button
                                       type="button"
                                       className="tracker-action-btn"
+                                      aria-label="Reopen — move back to In Progress"
                                       onClick={() => {
                                         updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'In Progress' } : item));
                                       }}
@@ -2615,6 +2626,7 @@ export default function Home() {
                                   <button
                                     type="button"
                                     className="tracker-action-btn delete"
+                                    aria-label="Delete this question from board"
                                     onClick={() => {
                                       updateActiveBoardQuestions(prev => prev.filter(item => item.id !== q.id));
                                       showToast('Question removed from board.');

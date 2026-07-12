@@ -1,0 +1,312 @@
+[
+  {
+    "id": "board_1783817985959",
+    "name": "Selenium learning",
+    "questions": [
+      {
+        "id": "q_1783817985959_fyz9p",
+        "text": "What is the Page Object Model (POM) in Selenium, and how does it help organize test code? Discuss its benefits, advantages, disadvantages, and the criteria you use to decide when to implement it.",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_dveey",
+        "text": "What are the key differences between the Page Object Model (POM) and the Page Factory pattern in Selenium?",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_o4bha",
+        "text": "How would you design a scalable Selenium automation framework using Java and TestNG, taking into account factors such as maintainability and reusability? Please include your approach to creating page objects, implementing data-driven testing, and executing test cases.",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_5wxw3",
+        "text": "Explain the Selenium framework architecture and its core components.",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_32yaj",
+        "text": "How do you manage configuration files, such as properties files, within a Selenium automation framework?",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_du5ju",
+        "text": "Why are constructors utilized in Selenium framework classes, particularly within the Page Object Model?",
+        "category": "Framework Design & Architecture",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_zzl2m",
+        "text": "Can you walk through the WebDriver initialization statement in Selenium, including any necessary configuration or browser settings?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_qusgk",
+        "text": "What is the difference between the `driver.get()` and `driver.navigate().to()` methods in Selenium?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_9sq8h",
+        "text": "How do you manage test execution across different browsers and environments, including the handling of browser-specific configurations and environment-specific test data?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_f2lx2",
+        "text": "Can you explain the concept of Selenium Grid, including its primary purpose and the benefits it provides for distributed test execution?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_eepv2",
+        "text": "How do you configure and execute Selenium test cases on a remote machine, and which tools or frameworks do you typically use for this purpose?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_2i4e5",
+        "text": "How is parallel execution implemented in Selenium, and what configurations are necessary to achieve it?",
+        "category": "Browser Navigation & Setup",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_zbtn7",
+        "text": "What are the different types of locators available in Selenium? Which locators do you prefer, and why?",
+        "category": "Locators & Element Identification",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_ti15f",
+        "text": "What are the key differences between XPath and CSS Selectors in Selenium, and how do you choose the most suitable locator strategy for a given scenario?",
+        "category": "Locators & Element Identification",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_i2mad",
+        "text": "How do you handle dynamic web elements whose IDs change every time the page loads? What strategies do you employ to ensure accurate element identification?",
+        "category": "Locators & Element Identification",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_7zeos",
+        "text": "Can you construct a dynamic XPath to extract Amazon product ratings or a specific player's statistics from a sports website? Please explain the reasoning behind your approach.",
+        "category": "Locators & Element Identification",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_4jp3w",
+        "text": "What are the differences between the `findElement()` and `findElements()` methods in Selenium?",
+        "category": "Locators & Element Identification",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_rbglq",
+        "text": "What are the different types of waits available in Selenium (implicit, explicit, and fluent), and when would you use each? Please provide examples of their usage.",
+        "category": "Synchronization & Waits",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_7fbvt",
+        "text": "Can you explain the difference between implicit and explicit waits in Selenium, and provide examples of scenarios where you would use each?",
+        "category": "Synchronization & Waits",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_rr3t8",
+        "text": "How do you use `WebDriverWait` in Selenium, and what benefits does it provide to your overall testing approach?",
+        "category": "Synchronization & Waits",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_s64po",
+        "text": "Can you provide a code snippet for implementing an explicit wait in Selenium, including any necessary configuration or settings?",
+        "category": "Synchronization & Waits",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_u08v6",
+        "text": "How do you switch between different windows or tabs in Selenium? Please include the techniques you use, along with best practices and important considerations.",
+        "category": "Window, Alert, & Frame Handling",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_5palt",
+        "text": "Why is it necessary to use a `Set` for managing window handles in Selenium, and how do you utilize it to handle various window-switching scenarios?",
+        "category": "Window, Alert, & Frame Handling",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_rntd3",
+        "text": "Describe how you handle multiple browser windows in Selenium, and provide an example of a scenario where this is necessary.",
+        "category": "Window, Alert, & Frame Handling",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_7ao7j",
+        "text": "How do you handle alerts, popups, and iframe elements during automation? Please include your strategies for managing modal windows and nested iframes.",
+        "category": "Window, Alert, & Frame Handling",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_go7l5",
+        "text": "How do you perform complex keyboard actions using the `Actions` class in Selenium?",
+        "category": "Actions Class & Complex Interactions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_a8s6n",
+        "text": "Can you provide a code snippet for implementing a drag-and-drop action in Selenium, including any necessary configuration or settings?",
+        "category": "Actions Class & Complex Interactions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_wgqmu",
+        "text": "How do you perform a control-click (multi-select) operation using the `Actions` class in Selenium?",
+        "category": "Actions Class & Complex Interactions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_nmqpc",
+        "text": "How do you handle dynamic dropdowns in Selenium, and what strategies do you use to interact with them effectively?",
+        "category": "Actions Class & Complex Interactions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_x9jzq",
+        "text": "Can you automate file upload and download scenarios using Selenium, including handling file input fields and verifying the operations? Please provide a code snippet for a file upload.",
+        "category": "File Handling & Data Input",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_2zgk8",
+        "text": "How do you pass data to your Selenium scripts, and which tools or technologies do you typically use for data-driven testing?",
+        "category": "File Handling & Data Input",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_sihrz",
+        "text": "Can you explain how to generate test execution reports in Selenium, including any tools or technologies you prefer to use?",
+        "category": "Reporting & Listeners",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_rkvdb",
+        "text": "How do you customize test reports after execution in Selenium, including any specific formatting or configuration options you apply?",
+        "category": "Reporting & Listeners",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_vf15o",
+        "text": "What are listeners in Selenium, and can you provide a code snippet demonstrating how to implement them?",
+        "category": "Reporting & Listeners",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_9f54y",
+        "text": "How do you handle exceptions in Selenium scripts? Please discuss the use of try-catch blocks, common exception types, and your overall error handling strategies.",
+        "category": "Exception Handling & Troubleshooting",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_3wq9d",
+        "text": "How do you handle stale element reference exceptions in Selenium, and what steps do you take to resolve them?",
+        "category": "Exception Handling & Troubleshooting",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_l18c4",
+        "text": "Can you provide a code snippet for taking a screenshot in Selenium, including any necessary configuration or settings?",
+        "category": "Exception Handling & Troubleshooting",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783817985959_f9wvv",
+        "text": "Can CAPTCHA be automated using Selenium? Please explain your approach or discuss alternative strategies.",
+        "category": "Limitations & Edge Cases",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      }
+    ]
+  }
+]

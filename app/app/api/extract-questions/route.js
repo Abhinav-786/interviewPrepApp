@@ -3,30 +3,28 @@ import OpenAI from 'openai';
 /**
  * /api/extract-questions
  * 
- * Uses OpenAI-compatible NVIDIA completion API to extract company name,
+ * Uses NVIDIA NIM API (via OpenAI-compatible SDK) to extract company name,
  * interview questions, and relevant tags matching the questions.
+ * API key is managed server-side via NVIDIA_API_KEY env variable.
  */
 
-const DEFAULT_API_KEY = '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';
 const BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const DEFAULT_MODEL = 'meta/llama-3.1-8b-instruct';
+const DEFAULT_MODEL = 'z-ai/glm-5.2';
 
 const DEFAULT_TAGS = ['Java', 'Javascript', 'Selenium', 'Automation', 'Manual', 'Playwright', 'Nightwatch', 'API Testing', 'General'];
 
+function getClient() {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured on the server.');
+  return new OpenAI({ apiKey, baseURL: BASE_URL });
+}
+
 export async function POST(request) {
   try {
-    const { content, apiKey, availableTags, questionsToPolish } = await request.json();
+    const { content, availableTags, questionsToPolish } = await request.json();
 
     if (questionsToPolish && Array.isArray(questionsToPolish)) {
-      const key = apiKey?.trim() || process.env.NVIDIA_API_KEY || DEFAULT_API_KEY;
-      if (!key) {
-        return Response.json({ error: 'Missing API Key.' }, { status: 400 });
-      }
-
-      const openai = new OpenAI({
-        apiKey: key,
-        baseURL: BASE_URL,
-      });
+      const openai = getClient();
 
       const prompt = `You are an expert technical interviewer and senior SDET/QA recruiter.
 Your task is to restructure and polish the following list of interview questions to ensure correct grammar and professional phrasing.
@@ -79,13 +77,11 @@ ${JSON.stringify(questionsToPolish, null, 2)}`;
       return Response.json({ error: 'No content provided' }, { status: 400 });
     }
 
-    const key = apiKey?.trim() || process.env.NVIDIA_API_KEY || DEFAULT_API_KEY;
-    
-    if (!key) {
-      return Response.json({
-        error: 'Missing API Key.',
-        needsKey: true
-      }, { status: 400 });
+    let openai;
+    try {
+      openai = getClient();
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
     }
 
     const tagsListStr = (availableTags || DEFAULT_TAGS).join(', ');
@@ -120,11 +116,6 @@ Format: - [Question Text] | [Tag]
 
 Raw LinkedIn Post Text:
 ${content}`;
-
-    const openai = new OpenAI({
-      apiKey: key,
-      baseURL: BASE_URL,
-    });
 
     const completion = await openai.chat.completions.create({
       model: DEFAULT_MODEL,
