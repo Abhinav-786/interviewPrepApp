@@ -36,7 +36,7 @@ InterviewPrepApp is a **Next.js 16** web application designed to help users coll
                 │ requests completions
                 ▼
   ┌──────────────────────────┐
-  │   NVIDIA AI Completions  │  ← Chat completions using model 'z-ai/glm-5.2'
+  │   NVIDIA AI Completions  │  ← Chat completions using model 'meta/llama-3.1-8b-instruct'
   │   API Endpoint           │
   └──────────────────────────┘
 ```
@@ -127,7 +127,7 @@ All state is loaded on React mount from the backend filesystem API and synchroni
 ## API Endpoints
 
 ### 1. `GET /api/receive-post-get`
-Called by the browser bookmarklet on LinkedIn. Extracts page content/metadata, requests z-ai/glm-5.2 to automatically extract the interview questions/company/tags, writes them temporarily to `.temp-imports/` and redirects the user to `/?import_id=...`.
+Called by the browser bookmarklet on LinkedIn. Extracts page content/metadata, requests meta/llama-3.1-8b-instruct to automatically extract the interview questions/company/tags, writes them temporarily to `.temp-imports/` and redirects the user to `/?import_id=...`.
 
 ### 2. `GET /api/pending-post?id=<import_id>`
 Fetches the pre-filled post data from `.temp-imports/` on load, and deletes the temp file from disk.

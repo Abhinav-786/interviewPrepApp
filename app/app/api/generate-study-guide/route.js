@@ -1,27 +1,36 @@
+import OpenAI from 'openai';
+
 /**
  * /api/generate-study-guide
  * 
- * Uses NVIDIA completions API to consolidate, de-duplicate, and organize
- * interview questions from multiple posts into a single unified prep sheet.
+ * Uses NVIDIA NIM API (via OpenAI-compatible SDK) to consolidate, de-duplicate,
+ * and organize interview questions from multiple posts into a unified prep sheet.
  * Strictly filters questions by selected topics/tags.
+ * API key is managed server-side via NVIDIA_API_KEY env variable.
  */
 
-const DEFAULT_API_KEY = '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';
 const BASE_URL = 'https://integrate.api.nvidia.com/v1';
 const DEFAULT_MODEL = 'z-ai/glm-5.2';
 
+function getClient() {
+  const apiKey = process.env.NVIDIA_API_KEY;
+  if (!apiKey) throw new Error('NVIDIA_API_KEY is not configured on the server.');
+  return new OpenAI({ apiKey, baseURL: BASE_URL });
+}
+
 export async function POST(request) {
   try {
-    const { content, topics, apiKey } = await request.json();
+    const { content, topics } = await request.json();
 
     if (!content || !content.trim()) {
       return Response.json({ error: 'No content to generate guide from.' }, { status: 400 });
     }
 
-    const key = apiKey?.trim() || process.env.NVIDIA_API_KEY || DEFAULT_API_KEY;
-    
-    if (!key) {
-      return Response.json({ error: 'Missing API Key.' }, { status: 400 });
+    let openai;
+    try {
+      openai = getClient();
+    } catch (e) {
+      return Response.json({ error: e.message }, { status: 500 });
     }
 
     const prompt = `You are an expert technical interviewer and SDET / QA recruiter. Your task is to analyze the following collection of interview questions gathered from multiple different LinkedIn posts.
@@ -39,32 +48,18 @@ Rules:
 Raw Questions from Multiple Posts:
 ${content}`;
 
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.2,
-        top_p: 1,
-        max_tokens: 8192,
-      }),
-      signal: AbortSignal.timeout(90000), // 90s timeout
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      top_p: 1,
+      max_tokens: 8192,
+      seed: 42,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('NVIDIA Study Guide API Error:', errText);
-      return Response.json({ error: 'Failed to consolidate questions. Please try again.' }, { status: response.status });
-    }
-
-    const data = await response.json();
-    const consolidatedText = (data.choices?.[0]?.message?.content || '').trim();
+    const consolidatedText = (completion.choices?.[0]?.message?.content || '').trim();
 
     return Response.json({
       success: true,

@@ -58,6 +58,26 @@ function getPostTags(post) {
   return [];
 }
 
+function getPostQuestions(post) {
+  if (!post) return [];
+  if (Array.isArray(post.questions)) return post.questions;
+  // Fallback: parse lines from content
+  const lines = (post.content || '').split('\n');
+  const parsed = [];
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const cleaned = trimmed.replace(/^[-*•\d+[\.\)]\s*/, '').trim();
+    if (cleaned) {
+      parsed.push({
+        text: cleaned,
+        tag: getPostTags(post)[0] || 'General'
+      });
+    }
+  }
+  return parsed;
+}
+
 // ─── CSV Export ─────────────────────────────────────────────────────────────
 function toCSV(posts) {
   const headers = ['#', 'Post URL', 'Company Name', 'Date Added', 'Topic Tags', 'Status', 'Content'];
@@ -78,15 +98,75 @@ function downloadCSV(posts) {
   URL.revokeObjectURL(url);
 }
 
+// Helper to parse questions from markdown guide
+function parseQuestionsFromMarkdown(markdownText) {
+  if (!markdownText) return [];
+  const lines = markdownText.split('\n');
+  const questions = [];
+  let currentCategory = 'General';
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+
+    // Detect headings (e.g. ### Java Core Concepts)
+    if (line.startsWith('#')) {
+      currentCategory = line.replace(/^#+\s*/, '').trim();
+      continue;
+    }
+
+    // Strip bold formatting globally for matching (e.g. **1.** What is Java? -> 1. What is Java?)
+    const lineWithoutBold = line.replace(/\*\*/g, '').trim();
+
+    // Check for standard list item indicators: e.g. "1. ", "1) ", "- ", "* "
+    const listItemMatch = lineWithoutBold.match(/^(\d+[\.\)]\s*|[-*•]\s*|\[\s*\]\s*|\[x\]\s*)(.+)$/i);
+
+    // Check for "Question 1:" or "Q1:" prefixes
+    const questionPrefixMatch = lineWithoutBold.match(/^(Question\s*\d+:\s*|Q\d+:\s*)(.+)$/i);
+
+    let isQuestion = false;
+    let questionText = '';
+
+    if (listItemMatch) {
+      isQuestion = true;
+      questionText = listItemMatch[2].trim();
+    } else if (questionPrefixMatch) {
+      isQuestion = true;
+      questionText = questionPrefixMatch[2].trim();
+    } else if (lineWithoutBold.endsWith('?') || lineWithoutBold.toLowerCase().startsWith('how ') || lineWithoutBold.toLowerCase().startsWith('what ') || lineWithoutBold.toLowerCase().startsWith('explain ')) {
+      // Direct question fallback
+      isQuestion = true;
+      questionText = lineWithoutBold;
+    }
+
+    // Clean up residual styling character wraps
+    if (questionText) {
+      // Remove leading/trailing quotes, underscores, asterisks
+      questionText = questionText.replace(/^[\*_\s"'`]+/, '').replace(/[\*_\s"'`]+$/, '').trim();
+    }
+
+    if (isQuestion && questionText && !questionText.startsWith('#') && !questionText.startsWith('---') && questionText.length > 5) {
+      questions.push({
+        id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        category: currentCategory,
+        text: questionText,
+        status: 'To Do'
+      });
+    }
+  }
+  return questions;
+}
+
 // ─── Toast ───────────────────────────────────────────────────────────────────
 function Toast({ msg, type, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3000);
     return () => clearTimeout(t);
   }, [onClose]);
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
   return (
     <div className={`toast toast-${type}`}>
-      <span className="toast-icon">{type === 'success' ? '✅' : '❌'}</span>
+      <span className="toast-icon">{icon}</span>
       {msg}
     </div>
   );
@@ -108,7 +188,7 @@ function ScrapeProgress({ step, error, authWall, loggingIn, loginStatus, onLogin
         <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
           LinkedIn requires login to view this post. Click the button below to connect your profile once in Chrome.
         </span>
-        
+
         {loginStatus && (
           <div style={{ fontSize: 11, padding: '6px 10px', background: 'rgba(255,255,255,0.05)', borderRadius: 4, width: '100%', border: '1px solid var(--border)', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
             {loginStatus}
@@ -167,6 +247,270 @@ function getBookmarkletCode(baseUrl) {
 }
 
 
+// ─── Tracker Task Modal ───────────────────────────────────────────────────────
+function TrackerTaskModal({ task, onClose, onUpdate, tags, nvidiaKeyProp, showToast }) {
+  const [text, setText] = useState(task.text);
+  const [category, setCategory] = useState(task.category || 'General');
+  const [status, setStatus] = useState(task.status || 'To Do');
+  const [notes, setNotes] = useState(task.notes || '');
+  const [aiResponse, setAiResponse] = useState(task.aiAnalysis || '');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
+
+  function handleSave() {
+    onUpdate({
+      ...task,
+      text: text.trim(),
+      category,
+      status,
+      notes: notes.trim(),
+      aiAnalysis: aiResponse,
+    });
+    onClose();
+  }
+
+  async function handleAnalyze() {
+    setAnalyzing(true);
+    setAnalysisError(null);
+    try {
+      const res = await fetch('/api/analyze-question', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: text,
+          answer: notes,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to analyze question.');
+      }
+      setAiResponse(data.analysis);
+      if (showToast) {
+        showToast('AI analysis completed successfully!');
+      }
+    } catch (err) {
+      setAnalysisError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
+  const showAiPane = !!aiResponse || analyzing || analysisError;
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: showAiPane ? 900 : 500, width: '90%', transition: 'max-width 0.3s ease' }}>
+        <div className="modal-header">
+          <span className="modal-title">📋 View Task Details</span>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: showAiPane ? '1fr 1fr' : '1fr', gap: 20 }}>
+          {/* Left Column: Editor */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="form-group">
+              <label className="form-label">Question Text</label>
+              <textarea
+                className="form-textarea"
+                style={{ minHeight: 70 }}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Category</label>
+                <select
+                  className="form-input"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', height: 38, padding: '0 8px', borderRadius: '6px' }}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  {tags.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group" style={{ flex: 1 }}>
+                <label className="form-label">Status</label>
+                <select
+                  className="form-input"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', height: 38, padding: '0 8px', borderRadius: '6px' }}
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="To Do">📖 To Do</option>
+                  <option value="In Progress">⏳ In Progress</option>
+                  <option value="Done">✅ Done</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <label className="form-label" style={{ margin: 0 }}>My Answer / Study Notes</label>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleAnalyze}
+                  disabled={analyzing}
+                  style={{ padding: '2px 8px', fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {analyzing ? (
+                    <><span className="spinner" style={{ width: 10, height: 10 }} /> Analyzing...</>
+                  ) : (
+                    notes.trim() ? '🪄 Verify Answer with AI' : '💡 Ask AI for Answer'
+                  )}
+                </button>
+              </div>
+              <textarea
+                className="form-textarea"
+                style={{ minHeight: 180 }}
+                placeholder="Write your study notes, solutions, or answers here. Click 'Verify with AI' to check your answer..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Right Column: AI Analysis */}
+          {showAiPane && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderLeft: '1px solid var(--border)', paddingLeft: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label" style={{ margin: 0, color: 'var(--primary)' }}>🧠 AI Expert Coach</label>
+                {aiResponse && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '2px 8px', fontSize: 10 }}
+                    onClick={() => {
+                      setNotes(prev => {
+                        const spacer = prev.trim() ? '\n\n---\n### AI Explanation:\n' : '';
+                        return prev + spacer + aiResponse;
+                      });
+                      if (showToast) {
+                        showToast('AI analysis appended to your notes!');
+                      }
+                    }}
+                  >
+                    💾 Copy to Notes
+                  </button>
+                )}
+              </div>
+
+              <div
+                className="form-textarea"
+                style={{
+                  flex: 1,
+                  minHeight: 330,
+                  maxHeight: 390,
+                  overflowY: 'auto',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderColor: 'rgba(255,255,255,0.05)',
+                  fontSize: 12.5,
+                  lineHeight: 1.6,
+                  padding: 12,
+                  whiteSpace: 'pre-wrap',
+                  color: 'var(--text-secondary)'
+                }}
+              >
+                {analyzing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
+                    <span className="spinner" style={{ width: 28, height: 28 }} />
+                    <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>NVIDIA AI is evaluating correctness...</span>
+                  </div>
+                ) : analysisError ? (
+                  <div style={{ color: 'var(--accent-red)' }}>⚠️ {analysisError}</div>
+                ) : (
+                  aiResponse
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={handleSave}>Save Changes</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Save Board Modal ────────────────────────────────────────────────────────
+function SaveBoardModal({ onClose, onConfirm, defaultName, loading }) {
+  const [boardName, setBoardName] = useState(defaultName || '');
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (boardName.trim()) {
+      onConfirm(boardName.trim());
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="modal-overlay">
+        <div className="modal" style={{ maxWidth: 420, textAlign: 'center', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <span className="spinner" style={{ width: 42, height: 42 }} />
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+              🪄 AI is polishing your questions...
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Formatting, structuring, and classifying study questions. This will take just a few seconds.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <div className="modal-header">
+          <span className="modal-title">📂 Track Study Progress</span>
+          <button className="modal-close" onClick={onClose} disabled={loading}>✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Choose a name for your new Study Tracker Board. This will group and track these questions under a separate tab in your Progress Tracker.
+            </p>
+            <div className="form-group">
+              <label className="form-label" style={{ marginBottom: 6, display: 'block' }}>Board Name</label>
+              <input
+                type="text"
+                className="form-input"
+                required
+                placeholder="e.g. Java Core, Selenium Automation, Barclays Prep"
+                value={boardName}
+                onChange={(e) => setBoardName(e.target.value)}
+                autoFocus
+                disabled={loading}
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', height: 38, padding: '0 12px', borderRadius: '6px', width: '100%' }}
+              />
+            </div>
+          </div>
+
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={loading}>Create & Track</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Add Post Modal ──────────────────────────────────────────────────────────
 function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nvidiaKeyProp, onSaveNvidiaKey }) {
   const [mode, setMode] = useState(isEdit ? 'manual' : 'bookmarklet'); // 'bookmarklet' | 'manual'
@@ -179,6 +523,7 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
   const [received, setReceived] = useState(!!initialData);
   const [copied, setCopied] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:3000');
+  const [structuredQuestions, setStructuredQuestions] = useState(initialData?.questions || []);
 
   // AI Extraction State
   const [nvidiaKey, setNvidiaKey] = useState(nvidiaKeyProp || '');
@@ -227,7 +572,6 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content,
-          apiKey: nvidiaKey,
           availableTags: tags
         })
       });
@@ -243,6 +587,9 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
 
       if (data.questions) {
         setContent(data.questions);
+      }
+      if (Array.isArray(data.structuredQuestions)) {
+        setStructuredQuestions(data.structuredQuestions);
       }
       if (data.company) {
         setAuthor(data.company);
@@ -262,7 +609,7 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
 
   function copyBookmarklet() {
     const code = getBookmarkletCode(baseUrl);
-    
+
     function fallbackCopy() {
       try {
         const ta = document.createElement('textarea');
@@ -309,11 +656,30 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
 
   function handleConfirm() {
     if (!content.trim() && !url.trim()) return;
+
+    // Parse content string into structured questions array
+    const parsedQ = [];
+    const lines = content.split('\n');
+    for (let line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      const cleaned = trimmed.replace(/^[-*•\d+[\.\)]\s*/, '').trim();
+      if (cleaned) {
+        // Look up tag from structuredQuestions, else fall back to first selected tag
+        const match = structuredQuestions.find(q => q.text === cleaned);
+        parsedQ.push({
+          text: cleaned,
+          tag: match ? match.tag : (selectedTags[0] || 'General')
+        });
+      }
+    }
+
     onSave({
       id: initialData?.id || genId(),
       url: url.trim(),
       author: author.trim() || 'Unknown Author',
       content: content.trim(),
+      questions: parsedQ,
       tags: selectedTags.length > 0 ? selectedTags : ['General'],
       status: initialData?.status || 'To Read',
       addedAt: initialData?.addedAt || new Date().toISOString(),
@@ -374,7 +740,7 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
                       <li>Set URL: paste the copied code</li>
                       <li>Save ✅</li>
                     </ol>
-                    
+
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
                       <button
                         type="button"
@@ -384,11 +750,11 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
                       >
                         {copied ? '✅ Copied to Clipboard!' : '📋 Copy Bookmarklet Code'}
                       </button>
-                      
+
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 4 }}>
                         or click inside the box below to select and copy manually:
                       </span>
-                      
+
                       <textarea
                         readOnly
                         value={getBookmarkletCode(baseUrl)}
@@ -474,10 +840,10 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
                   onChange={(e) => setContent(e.target.value)}
                   style={received ? { borderColor: 'rgba(52,216,139,0.3)', minHeight: 140 } : { minHeight: 140 }}
                 />
-                
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
                   <span className="form-hint">{content.length} characters</span>
-                  
+
                   {content.trim() && (
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       {showKeyInput ? (
@@ -487,7 +853,7 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
                             placeholder="Enter Custom API Key..."
                             className="form-input"
                             defaultValue={nvidiaKey}
-                            style={{ width: 160, height: 26, fontSize: 11, padding: '2px 8px', background: 'transparent', border: 'none', color: '#fff' }}
+                            style={{ width: 160, height: 26, fontSize: 11, padding: '2px 8px', background: 'transparent', border: 'none', color: 'var(--text-primary)' }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter') {
                                 handleSaveKey(e.target.value);
@@ -507,7 +873,7 @@ function AddPostModal({ onClose, onSave, tags, onAddTag, initialData, isEdit, nv
                           {extracting ? <><span className="spinner" style={{ width: 10, height: 10 }} /> Extracting...</> : '🪄 Extract Questions only'}
                         </button>
                       )}
-                      
+
                       {!showKeyInput && (
                         <button
                           type="button"
@@ -619,7 +985,7 @@ function ViewPostModal({ post, onClose }) {
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>{post.author}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Added on {formatDate(post.addedAt)}</div>
             </div>
-            
+
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className={`status-badge ${STATUS_CLASS[post.status]}`} style={{ cursor: 'default' }}>
                 <span className="status-dot" />
@@ -658,7 +1024,7 @@ function ViewPostModal({ post, onClose }) {
                 {copied ? '✅ Copied' : '📋 Copy Content'}
               </button>
             </div>
-            
+
             <div style={{
               background: 'rgba(0,0,0,0.2)',
               border: '1px solid var(--border)',
@@ -696,12 +1062,36 @@ export default function Home() {
   const [postToEdit, setPostToEdit] = useState(null);
 
   // Prep Generator Tab State
-  const [activeTab, setActiveTab] = useState('sheet'); // 'sheet' | 'prep'
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'resources' | 'prep' | 'tracker'
   const [prepSelectedTags, setPrepSelectedTags] = useState([]);
   const [prepKeywords, setPrepKeywords] = useState('');
   const [prepGuide, setPrepGuide] = useState(null);
   const [copiedPrep, setCopiedPrep] = useState(false);
   const [generatingPrep, setGeneratingPrep] = useState(false);
+
+  // Progress Tracker Tab State
+  const [trackerBoards, setTrackerBoards] = useState([]);
+  const [activeBoardId, setActiveBoardId] = useState('default');
+  const [showSaveBoardModal, setShowSaveBoardModal] = useState(false);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [newQuestionText, setNewQuestionText] = useState('');
+  const [newQuestionCategory, setNewQuestionCategory] = useState('General');
+  const [showAddQuestionInline, setShowAddQuestionInline] = useState(false);
+  const [activeTrackerTask, setActiveTrackerTask] = useState(null);
+
+  const activeBoard = trackerBoards.find(b => b.id === activeBoardId) || trackerBoards[0];
+  const activeQuestions = activeBoard ? activeBoard.questions : [];
+
+  function updateActiveBoardQuestions(updater) {
+    setTrackerBoards(prev => prev.map(board => {
+      if (board.id === activeBoardId || (!activeBoardId && board.id === 'default')) {
+        const nextQuestions = typeof updater === 'function' ? updater(board.questions) : updater;
+        return { ...board, questions: nextQuestions };
+      }
+      return board;
+    }));
+  }
 
   const [search, setSearch] = useState('');
   const [filterTag, setFilterTag] = useState('All');
@@ -711,9 +1101,23 @@ export default function Home() {
   const [toast, setToast] = useState(null);
   const [nvidiaKey, setNvidiaKey] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState('dark');
+  const [boardsLoaded, setBoardsLoaded] = useState(false);
+
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('interviewprep_theme', nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+  }
 
   // Load from project files & check URL import
   useEffect(() => {
+    // 0. Load theme from localStorage
+    const savedTheme = localStorage.getItem('interviewprep_theme') || 'dark';
+    setTheme(savedTheme);
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
     // 1. Fetch initial data from backend API
     fetch('/api/posts')
       .then(res => res.json())
@@ -736,7 +1140,7 @@ export default function Home() {
             const savedPostsStr = localStorage.getItem('interviewprep_posts');
             const savedTagsStr = localStorage.getItem('interviewprep_tags');
             const savedKeyStr = localStorage.getItem('interviewprep_nvidia_key') || localStorage.getItem('interviewprep_gemini_key') || '';
-            
+
             const savedPosts = savedPostsStr ? JSON.parse(savedPostsStr) : [];
             const savedTags = savedTagsStr ? JSON.parse(savedTagsStr) : [];
 
@@ -750,8 +1154,8 @@ export default function Home() {
               fetch('/api/posts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  posts: loadedPosts, 
+                body: JSON.stringify({
+                  posts: loadedPosts,
                   tags: loadedTags,
                   config: { nvidiaKey: loadedKey }
                 })
@@ -766,7 +1170,7 @@ export default function Home() {
         setPosts(loadedPosts);
         if (loadedTags.length > 0) setTags(loadedTags);
         if (loadedKey) setNvidiaKey(loadedKey);
-        
+
         setMounted(true);
       })
       .catch(err => {
@@ -788,7 +1192,7 @@ export default function Home() {
             if (data && data.content) {
               setInitialImportData(data);
               setShowModal(true);
-              
+
               // Automatically register any new suggested tags into the main tags list!
               if (Array.isArray(data.tags)) {
                 setTags(prev => {
@@ -833,6 +1237,67 @@ export default function Home() {
     }).catch(err => console.error('Save tags error:', err));
   }, [tags, mounted]);
 
+  // Load tracker boards from project file (data/boards.json) on mount
+  useEffect(() => {
+    if (!mounted) return;
+
+    fetch('/api/boards')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.success) throw new Error(data.error || 'Failed to load boards');
+
+        let boards = data.boards || [];
+
+        // Migration: if server only has the empty default board, check localStorage
+        const isEmptyDefault = boards.length === 1 && boards[0].id === 'default' && boards[0].questions.length === 0;
+        if (isEmptyDefault && typeof window !== 'undefined') {
+          try {
+            const lsBoards = localStorage.getItem('interviewprep_boards');
+            if (lsBoards) {
+              const parsed = JSON.parse(lsBoards);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                boards = parsed;
+                // Migrate: save to project file
+                fetch('/api/boards', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ boards })
+                }).catch(err => console.error('Board migration save error:', err));
+                localStorage.removeItem('interviewprep_boards');
+                console.log('Migrated tracker boards from localStorage to data/boards.json');
+              }
+            }
+          } catch (e) {
+            console.error('Board localStorage migration failed:', e);
+          }
+        }
+
+        setTrackerBoards(boards);
+        if (boards.length > 0) {
+          const hasActive = boards.some(b => b.id === activeBoardId);
+          if (!hasActive) setActiveBoardId(boards[0].id);
+        }
+
+        // Mark boards as loaded so the save effect can run
+        setBoardsLoaded(true);
+      })
+      .catch(err => {
+        console.error('Failed to load tracker boards:', err);
+        // Even on error, allow saves to work
+        setBoardsLoaded(true);
+      });
+  }, [mounted]);
+
+  // Save tracker boards to project file whenever they change
+  useEffect(() => {
+    if (!mounted || !boardsLoaded) return;
+    fetch('/api/boards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boards: trackerBoards })
+    }).catch(err => console.error('Save boards error:', err));
+  }, [trackerBoards, mounted, boardsLoaded]);
+
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type });
   }, []);
@@ -843,6 +1308,22 @@ export default function Home() {
   }
 
   function savePost(updatedPost) {
+    if (!Array.isArray(updatedPost.questions) || updatedPost.questions.length === 0) {
+      const parsedQuestions = [];
+      const lines = (updatedPost.content || '').split('\n');
+      for (let line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const cleaned = trimmed.replace(/^[-*•\d+[\.\)]\s*/, '').trim();
+        if (cleaned) {
+          parsedQuestions.push({
+            text: cleaned,
+            tag: updatedPost.tags?.[0] || 'General'
+          });
+        }
+      }
+      updatedPost.questions = parsedQuestions;
+    }
     setPosts((prev) => prev.map((p) => p.id === updatedPost.id ? updatedPost : p));
     showToast('Post updated successfully!');
   }
@@ -863,29 +1344,40 @@ export default function Home() {
       return;
     }
 
-    // 1. Filter local posts matching tags or keywords
-    const matched = posts.filter(post => {
-      const pTags = getPostTags(post);
-      const hasTagMatch = prepSelectedTags.some(t => pTags.includes(t));
-      
-      let hasKeywordMatch = false;
-      if (cleanKeywords) {
-        const words = cleanKeywords.toLowerCase().split(',').map(w => w.trim()).filter(Boolean);
-        const contentLower = (post.content || '').toLowerCase();
-        hasKeywordMatch = words.some(w => contentLower.includes(w));
-      }
-      
-      return hasTagMatch || hasKeywordMatch;
+    // 1. Gather all individual questions from posts matching tags or keywords locally
+    const matchedQuestions = [];
+    posts.forEach(post => {
+      const qList = getPostQuestions(post);
+      qList.forEach(q => {
+        const hasTagMatch = prepSelectedTags.includes(q.tag);
+
+        let hasKeywordMatch = false;
+        if (cleanKeywords) {
+          const words = cleanKeywords.toLowerCase().split(',').map(w => w.trim()).filter(Boolean);
+          const textLower = q.text.toLowerCase();
+          hasKeywordMatch = words.some(w => textLower.includes(w));
+        }
+
+        if (hasTagMatch || hasKeywordMatch) {
+          matchedQuestions.push({
+            text: q.text,
+            tag: q.tag,
+            company: post.author || 'Company'
+          });
+        }
+      });
     });
 
-    if (matched.length === 0) {
+    if (matchedQuestions.length === 0) {
       showToast('No matching questions found in your sheet.', 'error');
       setPrepGuide(null);
       return;
     }
 
-    // 2. Concatenate raw questions from all matched posts
-    const contentToConsolidate = matched.map((p, i) => `[Source ${i + 1}: ${p.author || 'Company'}]\n${p.content}`).join('\n\n');
+    // 2. Concatenate only the matched individual questions for LLM consolidation
+    const contentToConsolidate = matchedQuestions
+      .map((q, idx) => `[Source: ${q.company}] [Topic: ${q.tag}]\n- ${q.text}`)
+      .join('\n\n');
 
     setGeneratingPrep(true);
     setPrepGuide(null);
@@ -897,7 +1389,6 @@ export default function Home() {
         body: JSON.stringify({
           content: contentToConsolidate,
           topics: prepSelectedTags.join(', ') || cleanKeywords,
-          apiKey: nvidiaKey
         })
       });
 
@@ -938,6 +1429,68 @@ export default function Home() {
     showToast('Downloaded study guide as Markdown!');
   }
 
+  function handleStartTracking() {
+    if (!prepGuide) return;
+    setShowSaveBoardModal(true);
+  }
+
+  async function handleConfirmStartTracking(boardName) {
+    if (!prepGuide) return;
+    const parsed = parseQuestionsFromMarkdown(prepGuide);
+    if (parsed.length === 0) {
+      showToast('No questions found in the generated guide to track.', 'error');
+      setShowSaveBoardModal(false);
+      return;
+    }
+
+    setIsTrackingLoading(true);
+
+    try {
+      const res = await fetch('/api/extract-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionsToPolish: parsed.map(q => q.text),
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to polish questions.');
+      }
+
+      const polishedTexts = data.polishedQuestions || [];
+      const questions = parsed.map((q, idx) => ({
+        id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        text: polishedTexts[idx] || q.text,
+        category: q.category || 'General',
+        status: 'To Do',
+        notes: '',
+        aiAnalysis: ''
+      }));
+
+      const newBoard = {
+        id: `board_${Date.now()}`,
+        name: boardName,
+        questions
+      };
+
+      setTrackerBoards(prev => {
+        // Remove default board if empty
+        const filteredPrev = prev.filter(b => !(b.id === 'default' && b.questions.length === 0));
+        return [...filteredPrev, newBoard];
+      });
+      setActiveBoardId(newBoard.id);
+      setActiveTab('tracker');
+      showToast(`Successfully created study board "${boardName}" with ${questions.length} polished questions!`);
+      setShowSaveBoardModal(false);
+    } catch (err) {
+      console.error('Failed to track questions:', err);
+      showToast(`Error polishing questions: ${err.message}`, 'error');
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  }
+
   // Automatically add any custom tags in loaded posts back to tags list
   useEffect(() => {
     if (posts.length > 0) {
@@ -963,19 +1516,6 @@ export default function Home() {
     showToast('Post removed.', 'error');
   }
 
-  function cycleStatus(id) {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, status: STATUS_CYCLE[p.status] || 'To Read' } : p
-      )
-    );
-  }
-
-  function handleSort(col) {
-    if (sortCol === col) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    else { setSortCol(col); setSortDir('asc'); }
-  }
-
   function addTag(newTag) {
     if (!tags.includes(newTag)) {
       setTags((prev) => [...prev, newTag]);
@@ -994,8 +1534,7 @@ export default function Home() {
         getPostTags(p).some(t => t.toLowerCase().includes(q)) ||
         (p.url || '').toLowerCase().includes(q);
       const matchTag = filterTag === 'All' || getPostTags(p).includes(filterTag);
-      const matchStatus = filterStatus === 'All' || p.status === filterStatus;
-      return matchSearch && matchTag && matchStatus;
+      return matchSearch && matchTag;
     })
     .sort((a, b) => {
       let av = a[sortCol] || '', bv = b[sortCol] || '';
@@ -1003,100 +1542,421 @@ export default function Home() {
       return av < bv ? 1 : -1;
     });
 
-  const countByStatus = (s) => posts.filter((p) => p.status === s).length;
-
-  function SortTh({ col, label }) {
-    const active = sortCol === col;
-    return (
-      <th
-        className={active ? 'sorted' : ''}
-        onClick={() => handleSort(col)}
-        id={`sort-${col}`}
-      >
-        {label}
-        <span className="sort-indicator">{active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕'}</span>
-      </th>
-    );
-  }
-
   return (
-    <>
-      {/* Header */}
-      <header className="header">
-        <div className="header-inner">
-          <div className="logo">
-            <div className="logo-icon">🎯</div>
-            <span className="logo-text">InterviewPrep</span>
-            <span className="logo-badge">Beta</span>
-          </div>
-          <div className="header-actions">
-            <button
-              className="btn btn-success btn-sm"
-              onClick={() => posts.length && downloadCSV(filtered.length ? filtered : posts)}
-              disabled={posts.length === 0}
-              id="export-csv-btn"
-              title="Export visible posts to CSV"
-            >
-              ⬇ Export CSV
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowModal(true)}
-              id="add-post-btn"
-            >
-              + Add Post
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main */}
-      <main className="main">
-        {/* Hero */}
-        <section className="hero">
-          <h1>Your LinkedIn Interview Prep Sheet</h1>
-          <p>Collect posts, tag by topic, track your progress, and export to CSV — all in one place.</p>
-        </section>
-
-        {/* Navigation Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, borderBottom: '1px solid var(--border)' }}>
-          <button
-            type="button"
-            className={`btn btn-sm ${activeTab === 'sheet' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('sheet')}
-            style={{ borderRadius: '6px 6px 0 0', padding: '10px 20px', fontSize: 14 }}
+    <div className="app-container">
+      {/* Sidebar Navigation */}
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        <div>
+          {/* Logo (Acts as Sidebar Collapse Toggler) */}
+          <div 
+            className="sidebar-logo" 
+            style={{ 
+              margin: '0 0 24px 0', 
+              padding: '0 8px', 
+              cursor: 'pointer',
+              userSelect: 'none'
+            }}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            title={sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
-            📋 Sheet View
-          </button>
-          <button
-            type="button"
-            className={`btn btn-sm ${activeTab === 'prep' ? 'btn-primary' : 'btn-ghost'}`}
-            onClick={() => setActiveTab('prep')}
-            style={{ borderRadius: '6px 6px 0 0', padding: '10px 20px', fontSize: 14 }}
-          >
-            🎯 Prep Generator
-          </button>
+            🎯 <span>SDET Co-Pilot</span>
+          </div>
+
+          
+          <nav className="sidebar-menu">
+            <div 
+              className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => setActiveTab('dashboard')}
+              title={sidebarCollapsed ? 'Dashboard' : ''}
+            >
+              📊 <span>Dashboard</span>
+            </div>
+            <div 
+              className={`sidebar-item ${activeTab === 'resources' ? 'active' : ''}`}
+              onClick={() => setActiveTab('resources')}
+              title={sidebarCollapsed ? 'Study Resources' : ''}
+            >
+              📋 <span>Study Resources</span>
+            </div>
+            <div 
+              className={`sidebar-item ${activeTab === 'prep' ? 'active' : ''}`}
+              onClick={() => setActiveTab('prep')}
+              title={sidebarCollapsed ? 'Prep Generator' : ''}
+            >
+              🎯 <span>Prep Generator</span>
+            </div>
+            <div 
+              className={`sidebar-item ${activeTab === 'tracker' ? 'active' : ''}`}
+              onClick={() => setActiveTab('tracker')}
+              title={sidebarCollapsed ? 'Progress Tracker' : ''}
+            >
+              📅 <span>Progress Tracker</span>
+            </div>
+          </nav>
         </div>
 
-        {activeTab === 'sheet' ? (
+        <div className="sidebar-footer">
+          {/* Theme Switcher inside sidebar */}
+          {!sidebarCollapsed ? (
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              style={{ width: '100%', justifyContent: 'center', gap: 8 }}
+            >
+              {theme === 'dark' ? '🌙 Night Mode' : '☀️ Day Mode'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              style={{ width: 42, height: 42, borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}
+              title={theme === 'dark' ? 'Switch to Day Mode' : 'Switch to Night Mode'}
+            >
+              {theme === 'dark' ? '🌙' : '☀️'}
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className={`main-content ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        {activeTab === 'dashboard' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            {/* Header/Hero Section */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <div className="hero-badge" style={{ marginBottom: 12, display: 'inline-flex' }}>
+                  <span className="badge-glow"></span>
+                  <span className="badge-text">🚀 SDET Interview Prep Co-Pilot</span>
+                </div>
+                <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: 'var(--text-primary)' }}>
+                  Welcome back to your Study Dashboard
+                </h1>
+                <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+                  Track your progress, build study guides, and review polished technical interview questions.
+                </p>
+              </div>
+
+              {/* Quick Actions */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  className="btn btn-success"
+                  onClick={() => posts.length && downloadCSV(posts)}
+                  disabled={posts.length === 0}
+                  id="export-csv-btn-dashboard"
+                  title="Export all posts to CSV"
+                >
+                  ⬇ Export CSV
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowModal(true)}
+                  id="add-post-btn-dashboard"
+                >
+                  + Add Post
+                </button>
+              </div>
+            </div>
+
+            {/* Resources Stats Summary */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+              gap: 16 
+            }}>
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">🏢</div>
+                <div>
+                  <span className="dashboard-stat-label">Target Companies</span>
+                  <div className="dashboard-stat-value">
+                    {new Set(posts.map(p => p.author.toLowerCase().trim())).size}
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">📰</div>
+                <div>
+                  <span className="dashboard-stat-label">Resource Posts</span>
+                  <div className="dashboard-stat-value">{posts.length}</div>
+                </div>
+              </div>
+
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">❓</div>
+                <div>
+                  <span className="dashboard-stat-label">Extracted Questions</span>
+                  <div className="dashboard-stat-value">
+                    {posts.reduce((sum, p) => sum + (p.questions?.length || 0), 0)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="dashboard-stat-card">
+                <div className="dashboard-stat-icon">📅</div>
+                <div>
+                  <span className="dashboard-stat-label">Study Boards</span>
+                  <div className="dashboard-stat-value">{trackerBoards.filter(b => b.questions.length > 0).length}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress & Charts Section */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', 
+              gap: 20 
+            }}>
+              {/* Overall Progress Tracker Summary */}
+              <div className="dashboard-section">
+                <h3 className="dashboard-section-title">📊 Overall Study Progress</h3>
+                
+                {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
+                    No questions in Progress Tracker yet. Import a guide or add questions to view stats.
+                  </div>
+                ) : (() => {
+                  const allQuestions = trackerBoards.flatMap(b => b.questions || []);
+                  const total = allQuestions.length;
+                  const todo = allQuestions.filter(q => q.status === 'To Do').length;
+                  const progress = allQuestions.filter(q => q.status === 'In Progress').length;
+                  const done = allQuestions.filter(q => q.status === 'Done').length;
+                  const pct = Math.round((done / total) * 100);
+
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                        <div style={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: '50%',
+                          background: `conic-gradient(var(--accent-green) ${pct}%, var(--border) 0)`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative'
+                        }}>
+                          <div style={{
+                            width: 66,
+                            height: 66,
+                            borderRadius: '50%',
+                            background: 'var(--bg-card)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 16,
+                            fontWeight: 700
+                          }}>
+                            {pct}%
+                          </div>
+                        </div>
+
+                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                          <div style={{ background: 'rgba(0,0,0,0.1)', padding: '8px 12px', borderRadius: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Total Cards</span>
+                            <strong style={{ fontSize: 15 }}>{total}</strong>
+                          </div>
+                          <div style={{ background: 'var(--accent-blue-dim)', padding: '8px 12px', borderRadius: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--accent-blue)', textTransform: 'uppercase', display: 'block' }}>To Do</span>
+                            <strong style={{ fontSize: 15, color: 'var(--accent-blue)' }}>{todo}</strong>
+                          </div>
+                          <div style={{ background: 'var(--accent-amber-dim)', padding: '8px 12px', borderRadius: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--accent-amber)', textTransform: 'uppercase', display: 'block' }}>In Progress</span>
+                            <strong style={{ fontSize: 15, color: 'var(--accent-amber)' }}>{progress}</strong>
+                          </div>
+                          <div style={{ background: 'var(--accent-green-dim)', padding: '8px 12px', borderRadius: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--accent-green)', textTransform: 'uppercase', display: 'block' }}>Completed</span>
+                            <strong style={{ fontSize: 15, color: 'var(--accent-green)' }}>{done}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', marginBottom: 8 }}>Progress Bar</span>
+                        <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', background: 'var(--border)' }}>
+                          <div style={{ width: `${(todo / total) * 100}%`, background: 'var(--accent-blue)' }} title={`To Do: ${todo}`} />
+                          <div style={{ width: `${(progress / total) * 100}%`, background: 'var(--accent-amber)' }} title={`In Progress: ${progress}`} />
+                          <div style={{ width: `${(done / total) * 100}%`, background: 'var(--accent-green)' }} title={`Done: ${done}`} />
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Topic Distribution Chart */}
+              <div className="dashboard-section">
+                <h3 className="dashboard-section-title">🏷️ Top Study Categories</h3>
+                
+                {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
+                    No topics categorized yet. Polished question tags will be listed here.
+                  </div>
+                ) : (() => {
+                  const allQuestions = trackerBoards.flatMap(b => b.questions || []);
+                  const total = allQuestions.length;
+                  const categoryCounts = {};
+                  allQuestions.forEach(q => {
+                    categoryCounts[q.category] = (categoryCounts[q.category] || 0) + 1;
+                  });
+                  const categoriesSorted = Object.entries(categoryCounts)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 4);
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {categoriesSorted.map(([category, count]) => {
+                        const pct = Math.round((count / total) * 100);
+                        return (
+                          <div key={category}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                              <span style={{ fontWeight: 600 }}>{category}</span>
+                              <span style={{ color: 'var(--text-muted)' }}>{count} questions ({pct}%)</span>
+                            </div>
+                            <div style={{ background: 'var(--border)', height: 6, borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ 
+                                background: 'linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', 
+                                width: `${pct}%`, 
+                                height: '100%', 
+                                borderRadius: 3 
+                              }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Target Study Boards Completion Progress */}
+            <div className="dashboard-section">
+              <h3 className="dashboard-section-title">📂 Active Study Boards Readiness</h3>
+
+              {trackerBoards.filter(b => b.questions.length > 0).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>🎯</div>
+                  No study boards created yet. Use <strong>Prep Generator</strong> → <strong>Track Study Progress</strong> to create your first board!
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
+                  {trackerBoards.filter(b => b.questions.length > 0).map(board => {
+                    const total = board.questions.length;
+                    const done = board.questions.filter(q => q.status === 'Done').length;
+                    const inProgress = board.questions.filter(q => q.status === 'In Progress').length;
+                    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+                    return (
+                      <div 
+                        key={board.id} 
+                        className="dashboard-board-card"
+                        onClick={() => {
+                          setActiveBoardId(board.id);
+                          setActiveTab('tracker');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start' }}>
+                          <span style={{ fontWeight: 700, fontSize: 14 }}>📂 {board.name}</span>
+                          <span style={{ 
+                            fontSize: 11, 
+                            background: pct === 100 ? 'var(--accent-green-dim)' : 'rgba(255,255,255,0.06)', 
+                            color: pct === 100 ? 'var(--accent-green)' : 'var(--text-muted)',
+                            padding: '2px 8px', 
+                            borderRadius: 99,
+                            fontWeight: 600
+                          }}>
+                            {pct === 100 ? '✅ Complete' : `${pct}%`}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 10, fontSize: 11, color: 'var(--text-secondary)' }}>
+                          <span>{total} questions</span>
+                          <span>·</span>
+                          <span style={{ color: 'var(--accent-amber)' }}>{inProgress} in progress</span>
+                          <span>·</span>
+                          <span style={{ color: 'var(--accent-green)' }}>{done} done</span>
+                        </div>
+                        <div style={{ background: 'var(--border)', height: 5, borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ 
+                            width: `${pct}%`, 
+                            height: '100%', 
+                            background: pct === 100 
+                              ? 'var(--accent-green)' 
+                              : 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))', 
+                            borderRadius: 3,
+                            transition: 'width 0.4s ease'
+                          }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'resources' && (
           <>
-            {/* Stats */}
-            <div className="stats-bar">
-              <div className="stat-chip">
-                <span className="stat-dot" style={{ background: 'var(--accent-blue)' }} />
-                <strong>{posts.length}</strong> Total Posts
+            {/* Resources Summary Stats */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+              gap: 16, 
+              marginBottom: 24 
+            }}>
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14
+              }}>
+                <div style={{ fontSize: 24 }}>🏢</div>
+                <div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Companies</span>
+                  <strong style={{ fontSize: 18, color: 'var(--text-primary)' }}>
+                    {new Set(posts.map(p => p.author.toLowerCase().trim())).size}
+                  </strong>
+                </div>
               </div>
-              <div className="stat-chip">
-                <span className="stat-dot" style={{ background: 'var(--accent-blue)' }} />
-                <strong>{countByStatus('To Read')}</strong> To Read
+
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14
+              }}>
+                <div style={{ fontSize: 24 }}>📰</div>
+                <div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>LinkedIn Posts</span>
+                  <strong style={{ fontSize: 18, color: 'var(--text-primary)' }}>{posts.length}</strong>
+                </div>
               </div>
-              <div className="stat-chip">
-                <span className="stat-dot" style={{ background: 'var(--accent-amber)' }} />
-                <strong>{countByStatus('In Progress')}</strong> In Progress
-              </div>
-              <div className="stat-chip">
-                <span className="stat-dot" style={{ background: 'var(--accent-green)' }} />
-                <strong>{countByStatus('Done')}</strong> Done
+
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14
+              }}>
+                <div style={{ fontSize: 24 }}>❓</div>
+                <div>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Total Questions</span>
+                  <strong style={{ fontSize: 18, color: 'var(--text-primary)' }}>
+                    {posts.reduce((sum, p) => sum + (p.questions?.length || 0), 0)}
+                  </strong>
+                </div>
               </div>
             </div>
 
@@ -1122,15 +1982,6 @@ export default function Home() {
                 <option value="All">All Tags</option>
                 {tags.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
-              <select
-                id="filter-status"
-                className="filter-select"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-              >
-                <option value="All">All Status</option>
-                {STATUSES.map((s) => <option key={s}>{s}</option>)}
-              </select>
               {filtered.length < posts.length && (
                 <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                   Showing {filtered.length} of {posts.length}
@@ -1138,7 +1989,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* Table */}
+            {/* Dashboard Cards Grid */}
             {posts.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">📋</div>
@@ -1149,120 +2000,179 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              <div className="table-wrap">
-                <table className="table" role="table" aria-label="LinkedIn posts sheet">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 40 }}>#</th>
-                      <SortTh col="url" label="URL" />
-                      <SortTh col="author" label="Company" />
-                      <SortTh col="addedAt" label="Date Added" />
-                      <th>Content</th>
-                      <SortTh col="tag" label="Tags" />
-                      <SortTh col="status" label="Status" />
-                      <th style={{ width: 80 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length === 0 ? (
-                      <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                          No posts match your filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      filtered.map((post, i) => {
-                        return (
-                          <tr key={post.id}>
-                            <td className="col-num">{i + 1}</td>
-                            <td>
-                              {post.url ? (
-                                <a
-                                  className="post-url-link"
-                                  href={post.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  title={post.url}
-                                >
-                                  🔗 {post.url.replace('https://www.linkedin.com/posts/', '').slice(0, 30)}…
-                                </a>
-                              ) : (
-                                <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>—</span>
-                              )}
-                            </td>
-                            <td>
-                              <div className="author-cell">
-                                <div className="author-avatar">{initials(post.author)}</div>
-                                <span className="author-name">{post.author}</span>
-                              </div>
-                            </td>
-                            <td className="date-cell">{formatDate(post.addedAt)}</td>
-                            <td style={{ cursor: 'pointer' }} onClick={() => setViewingPost(post)}>
-                              <span className="content-cell" title="Click to view full content">
-                                {truncate(post.content, 120)}
-                              </span>
-                            </td>
-                            <td>
-                              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', maxWidth: 220 }}>
-                                {getPostTags(post).map(t => (
-                                  <span key={t} className="tag" style={getTagStyle(t)}>{t}</span>
-                                ))}
-                              </div>
-                            </td>
-                            <td>
-                              <button
-                                className={`status-badge ${STATUS_CLASS[post.status]}`}
-                                onClick={() => cycleStatus(post.id)}
-                                title="Click to cycle status"
-                                id={`status-${post.id}`}
-                              >
-                                <span className="status-dot" />
-                                {STATUS_EMOJI[post.status]} {post.status}
-                              </button>
-                            </td>
-                            <td>
-                              <div className="row-actions">
-                                <button
-                                  className="btn btn-secondary btn-sm btn-icon"
-                                  onClick={() => setViewingPost(post)}
-                                  title="View details"
-                                  style={{ marginRight: 6 }}
-                                  id={`view-${post.id}`}
-                                  aria-label={`View post by ${post.author}`}
-                                >
-                                  👁
-                                </button>
-                                <button
-                                  className="btn btn-secondary btn-sm btn-icon"
-                                  onClick={() => setPostToEdit(post)}
-                                  title="Edit post"
-                                  style={{ marginRight: 6 }}
-                                  id={`edit-${post.id}`}
-                                  aria-label={`Edit post by ${post.author}`}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className="btn btn-danger btn-sm btn-icon"
-                                  onClick={() => deletePost(post.id)}
-                                  title="Delete post"
-                                  id={`delete-${post.id}`}
-                                  aria-label={`Delete post by ${post.author}`}
-                                >
-                                  🗑
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+              <div className="dashboard-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                gap: 20,
+                marginTop: 20
+              }}>
+                {filtered.length === 0 ? (
+                  <div style={{
+                    gridColumn: '1 / -1',
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    color: 'var(--text-muted)',
+                    background: 'var(--bg-card)',
+                    border: '1px dashed var(--border)',
+                    borderRadius: 12
+                  }}>
+                    No posts match your filters.
+                  </div>
+                ) : (
+                  filtered.map((post) => (
+                    <div key={post.id} className="dashboard-card" style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      padding: 20,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 14,
+                      position: 'relative',
+                      boxShadow: 'var(--shadow-card)',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setViewingPost(post)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                    >
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div className="author-avatar" style={{ margin: 0 }}>{initials(post.author)}</div>
+                          <div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', display: 'block' }}>
+                              {post.author}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              {formatDate(post.addedAt)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {post.url && (
+                          <a
+                            href={post.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              fontSize: 12,
+                              color: 'var(--text-muted)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 28,
+                              height: 28,
+                              borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.04)',
+                              border: '1px solid var(--border)',
+                              textDecoration: 'none'
+                            }}
+                            title="Open LinkedIn Post"
+                          >
+                            🔗
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Content Preview */}
+                      <div style={{ 
+                        fontSize: 13, 
+                        lineHeight: 1.6, 
+                        color: 'var(--text-secondary)',
+                        flexGrow: 1,
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 4,
+                        WebkitBoxOrient: 'vertical',
+                        whiteSpace: 'pre-wrap',
+                        maxHeight: 84
+                      }}>
+                        {post.content}
+                      </div>
+
+                      {/* Questions Count Indicator */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        fontSize: 12,
+                        color: 'var(--accent-blue)',
+                        background: 'var(--accent-blue-dim)',
+                        width: 'fit-content',
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        fontWeight: 600
+                      }}>
+                        ❓ {post.questions?.length || 0} Questions Extracted
+                      </div>
+
+                      {/* Divider */}
+                      <div style={{ height: '1px', background: 'var(--border)' }} />
+
+                      {/* Footer Actions and Tags */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                        {/* Tags */}
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', overflow: 'hidden', height: 22, flexGrow: 1 }}>
+                          {getPostTags(post).slice(0, 2).map(t => (
+                            <span key={t} className="tag" style={{ ...getTagStyle(t), padding: '2px 8px', fontSize: 10 }}>{t}</span>
+                          ))}
+                          {getPostTags(post).length > 2 && (
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                              +{getPostTags(post).length - 2}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            className="btn btn-secondary btn-sm btn-icon"
+                            onClick={() => setViewingPost(post)}
+                            title="View details"
+                            id={`view-${post.id}`}
+                            aria-label={`View post by ${post.author}`}
+                          >
+                            👁
+                          </button>
+                          <button
+                            className="btn btn-secondary btn-sm btn-icon"
+                            onClick={() => setPostToEdit(post)}
+                            title="Edit post"
+                            id={`edit-${post.id}`}
+                            aria-label={`Edit post by ${post.author}`}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn btn-danger btn-sm btn-icon"
+                            onClick={() => deletePost(post.id)}
+                            title="Delete post"
+                            id={`delete-${post.id}`}
+                            aria-label={`Delete post by ${post.author}`}
+                          >
+                            🗑
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {activeTab === 'prep' && (
           <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4, color: 'var(--text-primary)' }}>Consolidated Interview Prep Guide</h2>
@@ -1331,6 +2241,13 @@ export default function Home() {
                   >
                     ⬇ Download (Markdown)
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={handleStartTracking}
+                  >
+                    🎯 Track Study Progress
+                  </button>
                 </>
               )}
             </div>
@@ -1348,7 +2265,7 @@ export default function Home() {
             {prepGuide && !generatingPrep && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Consolidated Study Guide</span>
-                
+
                 <div style={{
                   background: 'rgba(0,0,0,0.2)',
                   border: '1px solid var(--border)',
@@ -1366,6 +2283,369 @@ export default function Home() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'tracker' && (
+          <div className="tracker-container">
+            {/* Boards Sub-tabs + Actions row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12, borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+                {trackerBoards.map(board => (
+                  <div 
+                    key={board.id} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      background: activeBoardId === board.id ? 'var(--accent-blue-dim)' : 'var(--bg-card)',
+                      border: '1px solid',
+                      borderColor: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--border)',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      gap: 8,
+                      cursor: 'pointer',
+                      transition: 'var(--transition)'
+                    }}
+                    onClick={() => setActiveBoardId(board.id)}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--text-secondary)' }}>
+                      {board.name}
+                    </span>
+                    <span style={{ fontSize: 11, background: activeBoardId === board.id ? 'rgba(79,142,247,0.15)' : 'rgba(255,255,255,0.06)', padding: '1px 7px', borderRadius: '99px', color: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--text-muted)', fontWeight: 600 }}>
+                      {board.questions.length}
+                    </span>
+                    {board.id !== 'default' && (
+                      <button
+                        type="button"
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12, padding: '0 2px', display: 'flex', alignItems: 'center' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Are you sure you want to delete the board "${board.name}"?`)) {
+                            setTrackerBoards(prev => prev.filter(b => b.id !== board.id));
+                            setActiveBoardId('default');
+                          }
+                        }}
+                        title="Delete Board"
+                        aria-label={`Delete board ${board.name}`}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowAddQuestionInline(!showAddQuestionInline)}
+                  aria-label="Add a question manually"
+                >
+                  {showAddQuestionInline ? '✕ Close' : '+ Add Question'}
+                </button>
+
+                {activeQuestions.length > 0 && (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => {
+                      if (confirm('Are you sure you want to clear all questions from this board?')) {
+                        updateActiveBoardQuestions([]);
+                      }
+                    }}
+                    aria-label="Reset board — clear all questions"
+                  >
+                    🗑 Reset Board
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    const name = prompt('Enter a name for the new Study Board:');
+                    if (name && name.trim()) {
+                      const newBoard = {
+                        id: `board_${Date.now()}`,
+                        name: name.trim(),
+                        questions: []
+                      };
+                      setTrackerBoards(prev => [...prev, newBoard]);
+                      setActiveBoardId(newBoard.id);
+                    }
+                  }}
+                >
+                  ＋ New Board
+                </button>
+              </div>
+            </div>
+
+            {/* Progress stats bar */}
+            {activeQuestions.length > 0 && (
+              <div style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '16px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 16
+              }}>
+                <div style={{ display: 'flex', gap: 24 }}>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block' }}>Total</span>
+                    <strong style={{ fontSize: 16 }}>{activeQuestions.length}</strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', color: 'var(--accent-blue)' }}>To Do</span>
+                    <strong style={{ fontSize: 16, color: 'var(--accent-blue)' }}>
+                      {activeQuestions.filter(q => q.status === 'To Do').length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', color: 'var(--accent-amber)' }}>In Progress</span>
+                    <strong style={{ fontSize: 16, color: 'var(--accent-amber)' }}>
+                      {activeQuestions.filter(q => q.status === 'In Progress').length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', color: 'var(--accent-green)' }}>Done</span>
+                    <strong style={{ fontSize: 16, color: 'var(--accent-green)' }}>
+                      {activeQuestions.filter(q => q.status === 'Done').length}
+                    </strong>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, justifyContent: 'flex-end', minWidth: 260 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Completion: {Math.round((activeQuestions.filter(q => q.status === 'Done').length / activeQuestions.length) * 100) || 0}%
+                  </span>
+                  <div className="progress-bar-container">
+                    <div
+                      className="progress-bar-fill"
+                      style={{
+                        width: `${Math.round((activeQuestions.filter(q => q.status === 'Done').length / activeQuestions.length) * 100) || 0}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Inline Add Question Form */}
+            {showAddQuestionInline && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const text = newQuestionText.trim();
+                  if (!text) return;
+                  const newQ = {
+                    id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    category: newQuestionCategory.trim() || 'General',
+                    text,
+                    status: 'To Do'
+                  };
+                  updateActiveBoardQuestions(prev => [newQ, ...prev]);
+                  setNewQuestionText('');
+                  showToast('Question added on top of board!');
+                }}
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: 20,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12
+                }}
+              >
+                <h3 style={{ fontSize: 14, fontWeight: 600 }}>Add Custom Question</h3>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter question text..."
+                      value={newQuestionText}
+                      onChange={e => setNewQuestionText(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div style={{ width: 180 }}>
+                    <select
+                      className="form-select"
+                      value={newQuestionCategory}
+                      onChange={e => setNewQuestionCategory(e.target.value)}
+                    >
+                      <option value="General">General</option>
+                      {tags.filter(t => t !== 'All').map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <button type="submit" className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                    Add
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Kanban Board columns */}
+            <div className="tracker-board">
+              {activeQuestions.length === 0 ? (
+                <div className="tracker-empty">
+                  <div style={{ fontSize: 40 }}>📊</div>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>Your Study Board is empty</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 400, margin: '0 auto 8px' }}>
+                    Go to the <strong>Prep Generator</strong> tab, compile some interview questions using AI, and click <strong>Track Study Progress</strong> to populate this board automatically.
+                  </p>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={() => setActiveTab('prep')}
+                    >
+                      🎯 Go to Prep Generator
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        setShowAddQuestionInline(true);
+                      }}
+                    >
+                      ✍️ Add Question Manually
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                ['To Do', 'In Progress', 'Done'].map(statusName => {
+                  const items = activeQuestions.filter(q => q.status === statusName);
+                  const columnClass = statusName === 'To Do' ? 'tracker-column-todo' : statusName === 'In Progress' ? 'tracker-column-progress' : 'tracker-column-done';
+
+                  return (
+                    <div key={statusName} className={`tracker-column ${columnClass}`}>
+                      <div className="column-title">
+                        <span>
+                          {statusName === 'To Do' ? '📖 ' : statusName === 'In Progress' ? '⏳ ' : '✅ '}
+                          {statusName}
+                        </span>
+                        <span className="column-count">{items.length}</span>
+                      </div>
+
+                      <div className="tracker-card-list">
+                        {items.length === 0 ? (
+                          <div style={{
+                            textAlign: 'center',
+                            padding: '30px 10px',
+                            color: 'var(--text-muted)',
+                            fontSize: 12,
+                            border: '1px dashed var(--border)',
+                            borderRadius: 'var(--radius-sm)',
+                            marginTop: 10
+                          }}>
+                            No questions here.
+                          </div>
+                        ) : (
+                          items.map(q => (
+                            <div key={q.id} className="tracker-card">
+                              <div
+                                className="tracker-card-text"
+                                onClick={() => setActiveTrackerTask(q)}
+                                style={{ cursor: 'pointer' }}
+                                title="Click to view details & write notes"
+                              >
+                                {q.text}
+                              </div>
+                              <div className="tracker-card-footer">
+                                <span className="tag" style={{ ...getTagStyle(q.category), fontSize: 10, padding: '2px 8px' }}>
+                                  {q.category}
+                                </span>
+
+                                <div className="tracker-card-actions">
+                                  {statusName === 'To Do' && (
+                                    <button
+                                      type="button"
+                                      className="tracker-action-btn"
+                                      aria-label="Start studying — move to In Progress"
+                                      onClick={() => {
+                                        updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'In Progress' } : item));
+                                      }}
+                                      title="Start studying (Move to In Progress)"
+                                    >
+                                      ➡️
+                                    </button>
+                                  )}
+
+                                  {statusName === 'In Progress' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="tracker-action-btn"
+                                        aria-label="Move back to To Do"
+                                        onClick={() => {
+                                          updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'To Do' } : item));
+                                        }}
+                                        title="Move back to To Do"
+                                      >
+                                        ⬅️
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="tracker-action-btn"
+                                        aria-label="Mark as Done"
+                                        onClick={() => {
+                                          updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'Done' } : item));
+                                        }}
+                                        title="Complete studying (Move to Done)"
+                                      >
+                                        ✅
+                                      </button>
+                                    </>
+                                  )}
+
+                                  {statusName === 'Done' && (
+                                    <button
+                                      type="button"
+                                      className="tracker-action-btn"
+                                      aria-label="Reopen — move back to In Progress"
+                                      onClick={() => {
+                                        updateActiveBoardQuestions(prev => prev.map(item => item.id === q.id ? { ...item, status: 'In Progress' } : item));
+                                      }}
+                                      title="Reopen (Move to In Progress)"
+                                    >
+                                      ↩️
+                                    </button>
+                                  )}
+
+                                  <button
+                                    type="button"
+                                    className="tracker-action-btn delete"
+                                    aria-label="Delete this question from board"
+                                    onClick={() => {
+                                      updateActiveBoardQuestions(prev => prev.filter(item => item.id !== q.id));
+                                      showToast('Question removed from board.');
+                                    }}
+                                    title="Delete Question"
+                                  >
+                                    🗑
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
       </main>
@@ -1406,10 +2686,33 @@ export default function Home() {
         />
       )}
 
+      {activeTrackerTask && (
+        <TrackerTaskModal
+          task={activeTrackerTask}
+          onClose={() => setActiveTrackerTask(null)}
+          onUpdate={(updatedTask) => {
+            updateActiveBoardQuestions(prev => prev.map(item => item.id === updatedTask.id ? updatedTask : item));
+            showToast('Question updated successfully!');
+          }}
+          tags={tags}
+          nvidiaKeyProp={nvidiaKey}
+          showToast={showToast}
+        />
+      )}
+
+      {showSaveBoardModal && (
+        <SaveBoardModal
+          onClose={() => setShowSaveBoardModal(false)}
+          onConfirm={handleConfirmStartTracking}
+          defaultName="New Study Guide"
+          loading={isTrackingLoading}
+        />
+      )}
+
       {/* Toast */}
       {toast && (
         <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
-    </>
+    </div>
   );
 }

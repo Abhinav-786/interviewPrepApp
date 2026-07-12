@@ -5,8 +5,10 @@ const DATA_DIR = path.join(process.cwd(), 'data');
 const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
 const TAGS_FILE = path.join(DATA_DIR, 'tags.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
+const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
 
 const DEFAULT_TAGS = ['Java', 'Javascript', 'Selenium', 'Automation', 'Manual', 'Playwright', 'Nightwatch', 'API Testing', 'General'];
+const DEFAULT_BOARDS = [{ id: 'default', name: 'General Prep', questions: [] }];
 
 // Helper to ensure data directory and files exist
 function initDataFiles() {
@@ -21,6 +23,9 @@ function initDataFiles() {
   }
   if (!fs.existsSync(CONFIG_FILE)) {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify({ nvidiaKey: '' }, null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(BOARDS_FILE)) {
+    fs.writeFileSync(BOARDS_FILE, JSON.stringify(DEFAULT_BOARDS, null, 2), 'utf-8');
   }
 }
 

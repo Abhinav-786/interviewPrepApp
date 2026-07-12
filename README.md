@@ -4,7 +4,7 @@ A local technical interview preparation tracker and consolidated study guide gen
 
 ## 🚀 Key Features
 
-* **⚡ Zero-Click AI Question Extraction**: Bypasses LinkedIn authentication walls using a custom browser bookmarklet. The bookmarklet automatically grabs post contents and forwards them to a local server which uses the **NVIDIA AI completions API (`z-ai/glm-5.2` model)** to extract clean, formatted technical questions.
+* **⚡ Zero-Click AI Question Extraction**: Bypasses LinkedIn authentication walls using a custom browser bookmarklet. The bookmarklet automatically grabs post contents and forwards them to a local server which uses the **NVIDIA AI completions API (`meta/llama-3.1-8b-instruct` model)** to extract clean, formatted technical questions.
 * **🏢 Company & Tag Auto-Population**: The AI automatically detects what company name is mentioned in the post and recommends relevant study topics/tags, pre-filling them instantly when you save.
 * **🎯 Unified Study Prep Generator**: Compile a single, consolidated master guide from matching tags or keywords. The AI automatically **de-duplicates repeating questions** and organizes them logically into sub-topics (e.g. *Java Core*, *Selenium WebDriver*, *SQL Database*, *API Testing*) into a formatted Markdown study guide.
 * **💾 Project-Level JSON Database**: All data is saved inside the codebase in the `app/data/` folder, allowing you to easily push your study sheets to Git and access them across multiple devices or different web browsers.

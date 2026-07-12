@@ -9,7 +9,7 @@ This document catalogues the active **technical capabilities, skills, and integr
 | # | Skill | Focus Area | Status |
 |---|---|---|---|
 | S01 | Client-Side Bookmarklet Data Grab | Browser Redirection | ✅ Active |
-| S02 | NVIDIA z-ai/glm-5.2 AI Integration | Chat Completions | ✅ Active |
+| S02 | NVIDIA meta/llama-3.1-8b-instruct AI Integration | Chat Completions | ✅ Active |
 | S03 | Company & Tag Suggestion Engine | AI Automation | ✅ Active |
 | S04 | AI-Consolidated Study Prep Generator | LLM Data Processing | ✅ Active |
 | S05 | Filesystem JSON Database | Data Persistence | ✅ Active |
@@ -35,14 +35,14 @@ Bypasses LinkedIn scrapers and CORS blocks by reading LinkedIn post HTML directl
 
 ---
 
-## S02 — NVIDIA z-ai/glm-5.2 AI Integration
+## S02 — NVIDIA meta/llama-3.1-8b-instruct AI Integration
 
 **Files:**
 * Manual Extraction: `app/app/api/extract-questions/route.js`
 * Consolidation: `app/app/api/generate-study-guide/route.js`
 
 **Capability:**
-Leverages the NVIDIA z-ai/glm-5.2 completions API to parse raw conversation-style social media posts, stripping away greetings, personal chatter, and formatting them into structured lists of questions.
+Leverages the NVIDIA meta/llama-3.1-8b-instruct completions API to parse raw conversation-style social media posts, stripping away greetings, personal chatter, and formatting them into structured lists of questions.
 * Configured with strict prompt patterns to preserve header sections (e.g. "Java", "WebDriver") and groups.
 * Set with 60–90 second network timeout abort signals to support large question collection arrays without timing out.
 
