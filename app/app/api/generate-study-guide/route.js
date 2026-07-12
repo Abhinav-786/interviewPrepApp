@@ -1,3 +1,5 @@
+import OpenAI from 'openai';
+
 /**
  * /api/generate-study-guide
  * 
@@ -6,9 +8,9 @@
  * Strictly filters questions by selected topics/tags.
  */
 
-const DEFAULT_API_KEY = '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';
+const DEFAULT_API_KEY = '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';
 const BASE_URL = 'https://integrate.api.nvidia.com/v1';
-const DEFAULT_MODEL = 'z-ai/glm-5.2';
+const DEFAULT_MODEL = 'meta/llama-3.1-8b-instruct';
 
 export async function POST(request) {
   try {
@@ -39,32 +41,23 @@ Rules:
 Raw Questions from Multiple Posts:
 ${content}`;
 
-    const response = await fetch(`${BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.2,
-        top_p: 1,
-        max_tokens: 8192,
-      }),
-      signal: AbortSignal.timeout(90000), // 90s timeout
+    const openai = new OpenAI({
+      apiKey: key,
+      baseURL: BASE_URL,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('NVIDIA Study Guide API Error:', errText);
-      return Response.json({ error: 'Failed to consolidate questions. Please try again.' }, { status: response.status });
-    }
+    const completion = await openai.chat.completions.create({
+      model: DEFAULT_MODEL,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      temperature: 0.2,
+      top_p: 1,
+      max_tokens: 8192,
+      seed: 42,
+    });
 
-    const data = await response.json();
-    const consolidatedText = (data.choices?.[0]?.message?.content || '').trim();
+    const consolidatedText = (completion.choices?.[0]?.message?.content || '').trim();
 
     return Response.json({
       success: true,
