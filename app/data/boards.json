@@ -308,5 +308,613 @@
         "aiAnalysis": ""
       }
     ]
+  },
+  {
+    "id": "board_1783823786924",
+    "name": "Java and OPPs learning",
+    "questions": [
+      {
+        "id": "q_1783823786924_lkcv5",
+        "text": "Explain the core Object-Oriented Programming (OOP) concepts in Java and describe how you have implemented them within your Selenium automation framework.",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_b41rm",
+        "text": "What is the difference between an abstract class and an interface in Java? Please provide examples of each.",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_jwvrn",
+        "text": "What is the purpose of interfaces in Java, and can you provide specific examples of how you have implemented them in your test automation framework?",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_7g3hv",
+        "text": "What is the difference between method overloading and method overriding in Java? Please provide examples of each.",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_nr9yd",
+        "text": "What distinguishes compile-time polymorphism from runtime polymorphism in Java?",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_h0dpb",
+        "text": "Is it possible to override or overload static methods in Java? Please explain your reasoning.",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_63hhy",
+        "text": "How do you handle a scenario in Java where you need to implement only a subset of methods declared across two different interfaces?",
+        "category": "OOP Core Concepts",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_a3a7s",
+        "text": "What are the differences between the `final`, `finally`, and `finalize` keywords in Java?",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_1rbuy",
+        "text": "Explain the purpose of the `static` keyword in Java, outline its primary use cases, and provide examples of how you have applied it in your test automation framework.",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_3kicp",
+        "text": "What is the difference between static and non-static methods and variables in Java?",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_miyfx",
+        "text": "Explain the use of the `final`, `static`, and `this` keywords in Java, including their syntax, purpose, and best practices.",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_lqdzo",
+        "text": "Is it possible to declare public, static, and final variables in Java?",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_4nyg4",
+        "text": "What is the purpose of the `super` keyword in Java, and how is it utilized?",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_uei0y",
+        "text": "What are the key differences between the `this` and `super` keywords in Java?",
+        "category": "Keywords & Modifiers",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_ej5ek",
+        "text": "Explain the purpose and usage of a constructor in Java, and detail how it differs from a regular method.",
+        "category": "Constructors",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_7oian",
+        "text": "How do you invoke constructors from both a parent class and the same class within a Java class?",
+        "category": "Constructors",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_3h17w",
+        "text": "Can a constructor be declared as private in Java? If so, what are its practical use cases?",
+        "category": "Constructors",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_umb2v",
+        "text": "Is it possible to use the `declare` keyword to create a static constructor in Java? Please clarify your answer.",
+        "category": "Constructors",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_zv173",
+        "text": "Describe the Java Collections Framework, including the specific use cases for `HashMap` and `ArrayList`, and provide examples of how you have applied them in automation testing.",
+        "category": "Collections & Streams",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_yc2ku",
+        "text": "Does the `Map` interface in Java allow null keys?",
+        "category": "Collections & Streams",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_calca",
+        "text": "What are streams in Java, and how are they utilized in application development?",
+        "category": "Collections & Streams",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_thygt",
+        "text": "Explain the exception hierarchy in Java, differentiating between checked and unchecked exceptions.",
+        "category": "Exceptions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_bor2l",
+        "text": "What is the difference between checked and unchecked exceptions in Java? Please provide examples of each.",
+        "category": "Exceptions",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_73evc",
+        "text": "Can you explain the concept of string immutability in Java and provide an example demonstrating its usage?",
+        "category": "Strings",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_1zjk0",
+        "text": "Can you write a Java program to reverse a string or check if it is a palindrome, utilizing string manipulation techniques and explaining your algorithmic approach?",
+        "category": "Strings",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_65181",
+        "text": "Write a Java program to reverse a string without relying on built-in reversal methods.",
+        "category": "Strings",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_g2nls",
+        "text": "Given an array `{6, 8, 11, 6, 7, 18}` and a target sum of `17`, write a Java program to find the indices of any two elements whose sum equals the target, and explain your approach.",
+        "category": "Java Coding & Algorithms",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_36fm3",
+        "text": "Write a Java program to identify the most and least frequently occurring characters in a given string, and explain your approach.",
+        "category": "Java Coding & Algorithms",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_gsnjv",
+        "text": "Write a Java program to find the second most frequently occurring character in a given string.",
+        "category": "Java Coding & Algorithms",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_wiagx",
+        "text": "Write a Java program to rearrange a given string by moving vowels to the left, consonants to the middle, and special characters to the right.",
+        "category": "Java Coding & Algorithms",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      },
+      {
+        "id": "q_1783823786924_pyfbm",
+        "text": "Can you explain the Singleton design pattern in Java, including its implementation, use cases, and benefits?",
+        "category": "Design Patterns",
+        "status": "To Do",
+        "notes": "",
+        "aiAnalysis": ""
+      }
+    ]
+  },
+  {
+    "id": "board_1783893878293",
+    "name": "Live fetch",
+    "questions": [
+      {
+        "id": "post_1783894174656_884sg",
+        "text": "How do you design a Page Object Model (POM) framework from scratch, and how do you manage test data separately using JSON or Excel?",
+        "status": "To Read",
+        "category": "Automation",
+        "tags": [
+          "Automation",
+          "Design Patterns",
+          "Java"
+        ],
+        "notes": "💡 Hint: Discuss structuring base pages, page classes, and test classes. Mention using data providers or external libraries to parse JSON/Excel for data-driven testing.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=How+do+you+design",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_qlfu4",
+        "text": "How would you handle a StaleElementReferenceException in Selenium when iterating through a list of elements that re-render upon interaction?",
+        "status": "To Read",
+        "category": "Selenium",
+        "tags": [
+          "Selenium",
+          "Automation",
+          "Java"
+        ],
+        "notes": "💡 Hint: Explain that the DOM element is no longer attached to the document. Discuss re-locating the element within the loop or using a custom wait condition.",
+        "sourceUrl": "https://stackoverflow.com/questions/18225997/stale-element-reference-element-is-not-attached-to-the-page-document",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_qy1xl",
+        "text": "When is it appropriate to use explicit waits instead of implicit waits or hard pauses in test automation, and how do you implement them?",
+        "status": "To Read",
+        "category": "Selenium",
+        "tags": [
+          "Selenium",
+          "Automation",
+          "Playwright"
+        ],
+        "notes": "💡 Hint: Contrast implicit waits (global, potentially flaky) with explicit waits (targeted). Mention WebDriverWait and ExpectedConditions to wait for specific element states rather than Thread.sleep().",
+        "sourceUrl": "https://stackoverflow.com/questions/5868439/wait-for-page-load-in-selenium",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_h2kv1",
+        "text": "How do you implement parallel test execution using Selenium Grid, and what are the common challenges with cross-browser testing in a containerized environment?",
+        "status": "To Read",
+        "category": "Selenium",
+        "tags": [
+          "Selenium",
+          "Docker",
+          "TestNG"
+        ],
+        "notes": "💡 Hint: Discuss setting up Hub and Node configurations, using TestNG parallel attributes, and containerizing the grid with Docker. Mention thread safety and driver management as common challenges.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=How+do+you+implement+parallel",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_7rdoo",
+        "text": "How do you intercept and mock network requests in modern automation frameworks, and why is this useful for API and UI integration tests?",
+        "status": "To Read",
+        "category": "Playwright",
+        "tags": [
+          "Playwright",
+          "Cypress",
+          "API Testing"
+        ],
+        "notes": "💡 Hint: Explain using page.route() in Playwright or cy.intercept() in Cypress to stub API responses. Mention testing UI states (loading, error) without relying on backend availability.",
+        "sourceUrl": "https://stackoverflow.com/questions/71082471/playwright-intercept-server-side-network-request",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_qh0f8",
+        "text": "How do you persist authentication state across multiple browser instances in end-to-end testing to avoid logging in for every test?",
+        "status": "To Read",
+        "category": "Playwright",
+        "tags": [
+          "Playwright",
+          "Automation",
+          "JavaScript"
+        ],
+        "notes": "💡 Hint: Discuss saving storage state (cookies, localStorage) to a JSON file and reusing it in test setup. Mention limitations with IndexedDB (e.g., Firebase) and custom global setup scripts.",
+        "sourceUrl": "https://stackoverflow.com/questions/63479708/maintain-login-session-after-first-browser-instance-in-playwright",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_d323a",
+        "text": "What is your approach to integrating automated UI and API tests into a CI/CD pipeline using tools like Jenkins or GitHub Actions?",
+        "status": "To Read",
+        "category": "CI/CD",
+        "tags": [
+          "CI/CD",
+          "Automation",
+          "Docker"
+        ],
+        "notes": "💡 Hint: Cover triggering tests on PR merges, generating test reports (Allure/JUnit), running tests in Docker containers, and failing the pipeline if test success thresholds drop.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=How+would+you+integrate",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_ch55o",
+        "text": "How do you perform API automation testing using RestAssured or Postman, and how do you validate complex JSON responses?",
+        "status": "To Read",
+        "category": "API Testing",
+        "tags": [
+          "API Testing",
+          "Postman",
+          "Java"
+        ],
+        "notes": "💡 Hint: Explain setting up requests, passing headers/auth, and using JSONPath or schema validation to assert specific fields or the entire response structure.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=How+do+you+test+REST+APIs",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_9nntu",
+        "text": "How do you handle differences in visual regression testing screenshots between headless and headed browser runs?",
+        "status": "To Read",
+        "category": "Playwright",
+        "tags": [
+          "Playwright",
+          "Automation",
+          "JavaScript"
+        ],
+        "notes": "💡 Hint: Discuss rendering inconsistencies (e.g., fonts, scrollbar dimensions) between modes. Mention adjusting screenshot thresholds, masking dynamic elements, or forcing consistent viewport sizes.",
+        "sourceUrl": "https://stackoverflow.com/questions/77245555/how-to-ignore-eliminate-difference-playwright-screenshots-in-headed-and-headless",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_r0oaw",
+        "text": "How do you manage environment-specific configurations (like URLs, credentials, and browser settings) in an automation framework?",
+        "status": "To Read",
+        "category": "Automation",
+        "tags": [
+          "Automation",
+          "Design Patterns",
+          "CI/CD"
+        ],
+        "notes": "💡 Hint: Discuss using external config files (.env, properties, YAML) and injecting them via CI parameters. Mention avoiding hardcoded values and using base classes to read configs dynamically.",
+        "sourceUrl": "https://stackoverflow.com/questions/68094951/how-to-get-playwright-to-use-the-value-for-headless-in-my-config-file",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_38oyn",
+        "text": "How do you identify and resolve flaky tests in a large automation suite, particularly when dealing with dynamic UI elements or timing issues?",
+        "status": "To Read",
+        "category": "Automation",
+        "tags": [
+          "Automation",
+          "Selenium",
+          "Playwright"
+        ],
+        "notes": "💡 Hint: Mention analyzing test run history, isolating tests, and replacing implicit waits with dynamic explicit waits. Discuss using retry logic sparingly and ensuring proper test data teardown.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=How+do+you+handle+flaky",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894174656_blefa",
+        "text": "What are the key differences between TestNG and JUnit 5 for building an automation framework, and why might you choose one over the other?",
+        "status": "To Read",
+        "category": "TestNG",
+        "tags": [
+          "TestNG",
+          "JUnit",
+          "Java"
+        ],
+        "notes": "💡 Hint: Compare annotations, parallel execution capabilities, and built-in reporting. Mention TestNG's native data providers and grouping vs JUnit 5's extension model and Jupiter API.",
+        "sourceUrl": "https://www.reddit.com/r/QualityAssurance/search/?q=What+is+the+difference",
+        "sourceBadge": "🔵 Stack Overflow",
+        "createdAt": "2026-07-12T22:09:34.656Z"
+      },
+      {
+        "id": "post_1783894428265_ukac0",
+        "text": "How do you architect a test automation framework from scratch to handle authentication state across multiple parallel browser instances without re-executing login flows for every test?",
+        "status": "To Do",
+        "category": "Playwright",
+        "notes": "💡 Hint: Discuss Playwright's storageState or similar mechanisms for saving and reusing cookies/localStorage. Mention the challenges with modern auth like Firebase using indexedDB and how to inject custom storage or use API tokens to bypass UI logins.\n🔗 Source: https://stackoverflow.com/questions/63479708/maintain-login-session-after-first-browser-instance-in-playwright\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Playwright",
+          "System Design",
+          "Automation"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_nf3ay",
+        "text": "When designing an E2E test infrastructure, how do you handle conditional logic where an element's presence dictates the next step, without introducing hidden flakiness?",
+        "status": "To Do",
+        "category": "Playwright",
+        "notes": "💡 Hint: Explain why traditional if-else blocks with element checks can cause race conditions. Advocate for deterministic test design, or using modern framework features like Playwright's locator.isVisible() which handles waits gracefully without arbitrary sleeps.\n🔗 Source: https://stackoverflow.com/questions/69206796/how-to-make-conditional-statements-using-selectors-on-playwright\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Playwright",
+          "Design Patterns",
+          "Automation"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_i4s26",
+        "text": "How would you design a test automation strategy for a greenfield microservices project to ensure a healthy balance across the test pyramid?",
+        "status": "To Do",
+        "category": "System Design",
+        "notes": "💡 Hint: Focus on contract testing between microservices, heavy unit testing at the service level, and thinning out the top E2E layer. Discuss the trade-offs of integration tests versus end-to-end tests in a distributed architecture.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=How%2Bdo%2Byou%2Bmanage\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "System Design",
+          "Automation",
+          "API Testing"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_1ardp",
+        "text": "What metrics do you use to measure the effectiveness of a test automation framework, and how do you identify and systematically eliminate flaky tests?",
+        "status": "To Do",
+        "category": "Automation",
+        "notes": "💡 Hint: Mention metrics like code coverage, defect escape rate, and test execution time. For flakiness, discuss implementing quarantine thresholds, retry analysis, and root-causing race conditions or shared state issues rather than just adding retries.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=How%2Bdo%2Byou%2Bidentify\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Automation",
+          "CI/CD",
+          "System Design"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_ws7yo",
+        "text": "How would you architect a performance testing pipeline within a CI/CD environment using tools like k6 or Gatling without bottlenecking the deployment process?",
+        "status": "To Do",
+        "category": "Performance Testing",
+        "notes": "💡 Hint: Discuss running baseline performance tests on every PR and full-scale load tests on nightly builds. Mention provisioning ephemeral load generators in Kubernetes or cloud environments to isolate test infrastructure from CI runners.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=What%2Bis%2Byour%2Bapproach\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Performance Testing",
+          "CI/CD",
+          "Docker"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_r7g5g",
+        "text": "How do you handle StaleElementReferenceExceptions in Selenium at a framework level, and what architectural changes would you introduce to prevent them entirely?",
+        "status": "To Do",
+        "category": "Selenium",
+        "notes": "💡 Hint: Explain that DOM elements detach during re-renders causing stale references. Discuss implementing custom wrapper locators or fluent waits that re-fetch elements, and advocate migrating to modern frameworks that auto-wait or refactoring tests to avoid storing element references.\n🔗 Source: https://stackoverflow.com/questions/18225997/stale-element-reference-element-is-not-attached-to-the-page-document\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Selenium",
+          "Java",
+          "Design Patterns"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_0l9gc",
+        "text": "How would you design a test platform to automatically collect E2E code coverage and report it to SonarQube without breaking the build or affecting test execution speed?",
+        "status": "To Do",
+        "category": "Playwright",
+        "notes": "💡 Hint: Discuss using Playwright's V8 coverage API or similar tools to capture coverage during execution. Mention the challenges of mapping bundled code back to source files using source maps and the overhead of processing these reports asynchronously in CI.\n🔗 Source: https://stackoverflow.com/questions/76682362/how-to-collect-code-coverage-from-playwright-to-sonar-angular-project\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Playwright",
+          "CI/CD",
+          "System Design"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_dg6pk",
+        "text": "How do you architect a test data management strategy at scale that ensures test isolation while minimizing database cleanup overhead?",
+        "status": "To Do",
+        "category": "System Design",
+        "notes": "💡 Hint: Discuss patterns like the Factory pattern for generating ephemeral data, using API calls for test setup instead of UI, and leveraging database transactions or test-specific schemas that can be rolled back or dropped after test execution.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=What%2Bis%2Byour%2Bstrategy\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "System Design",
+          "Automation",
+          "API Testing"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_30gve",
+        "text": "How would you handle a team where developers push back on writing unit tests, and how would you introduce a shift-left testing culture in an organization resistant to change?",
+        "status": "To Do",
+        "category": "Automation",
+        "notes": "💡 Hint: Focus on coaching and pairing with developers rather than mandating rules. Discuss demonstrating the value of shift-left through faster feedback loops, reducing QA bottlenecks, and integrating quality gates into CI that are owned by the whole team.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=How%2Bwould%2Byou%2Bintroduce\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Automation",
+          "CI/CD",
+          "Manual Testing"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_qhba8",
+        "text": "How do you intercept and mock server-side network requests in a modern E2E framework, and what are the architectural trade-offs of doing so?",
+        "status": "To Do",
+        "category": "Playwright",
+        "notes": "💡 Hint: Discuss using Playwright's page.route() to fulfill requests with mock data. Mention that while this increases test stability and speed, it bypasses actual backend validation, so it must be balanced with integration tests.\n🔗 Source: https://stackoverflow.com/questions/71082471/playwright-intercept-server-side-network-request\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Playwright",
+          "API Testing",
+          "Automation"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_kfn4x",
+        "text": "How do you resolve visual regression testing discrepancies, such as 1px differences between headless and headed browser runs, without masking actual UI defects?",
+        "status": "To Do",
+        "category": "Playwright",
+        "notes": "💡 Hint: Explain that rendering engines can behave differently in headless modes. Discuss setting consistent viewport sizes, disabling anti-aliasing, or using DOM-based visual testing tools rather than relying solely on pixel comparisons.\n🔗 Source: https://stackoverflow.com/questions/77245555/how-to-ignore-eliminate-difference-playwright-screenshots-in-headed-and-headless\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Playwright",
+          "Automation",
+          "System Design"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      },
+      {
+        "id": "post_1783894428265_ya151",
+        "text": "Describe how you would architect a scalable test infrastructure at your previous company to support hundreds of parallel test executions across multiple environments.",
+        "status": "To Do",
+        "category": "Docker",
+        "notes": "💡 Hint: Discuss containerizing test runners with Docker, using orchestration tools like Kubernetes or cloud providers like BrowserStack/SauceLabs. Highlight the importance of centralized reporting, dynamic test data provisioning, and managing concurrency limits.\n🔗 Source: https://www.reddit.com/r/QualityAssurance/search/?q=Describe%2Bhow%2Byou%2Barchitected\n🔵 Sourced from Stack Overflow",
+        "aiAnalysis": "",
+        "tags": [
+          "Docker",
+          "System Design",
+          "CI/CD"
+        ],
+        "createdAt": "2026-07-12T22:13:48.265Z"
+      }
+    ]
   }
 ]

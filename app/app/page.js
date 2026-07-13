@@ -1069,6 +1069,18 @@ export default function Home() {
   const [copiedPrep, setCopiedPrep] = useState(false);
   const [generatingPrep, setGeneratingPrep] = useState(false);
 
+  // Community Questions Fetcher State
+  const [fetcherOpen, setFetcherOpen] = useState(false);
+  const [fetcherExp, setFetcherExp] = useState('mid');
+  const [fetcherSources, setFetcherSources] = useState(['reddit', 'stackoverflow']);
+  const [fetcherLoading, setFetcherLoading] = useState(false);
+  const [fetchedQuestions, setFetchedQuestions] = useState([]);
+  const [selectedFetched, setSelectedFetched] = useState(new Set());
+  const [fetcherTargetBoard, setFetcherTargetBoard] = useState('');
+  const [fetcherStep, setFetcherStep] = useState('config'); // 'config' | 'results'
+  const [fetcherMeta, setFetcherMeta] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Progress Tracker Tab State
   const [trackerBoards, setTrackerBoards] = useState([]);
   const [activeBoardId, setActiveBoardId] = useState('default');
@@ -1086,7 +1098,15 @@ export default function Home() {
   function updateActiveBoardQuestions(updater) {
     setTrackerBoards(prev => prev.map(board => {
       if (board.id === activeBoardId || (!activeBoardId && board.id === 'default')) {
-        const nextQuestions = typeof updater === 'function' ? updater(board.questions) : updater;
+        const prevQuestions = board.questions || [];
+        const nextQuestions = typeof updater === 'function' ? updater(prevQuestions) : updater;
+
+        const prevDone = prevQuestions.filter(q => q.status === 'Done').length;
+        const nextDone = nextQuestions.filter(q => q.status === 'Done').length;
+        if (nextDone > prevDone) {
+          logStudyActivity();
+        }
+
         return { ...board, questions: nextQuestions };
       }
       return board;
@@ -1099,10 +1119,238 @@ export default function Home() {
   const [sortCol, setSortCol] = useState('addedAt');
   const [sortDir, setSortDir] = useState('desc');
   const [toast, setToast] = useState(null);
+  const showToast = useCallback((msg, type = 'success') => {
+    setToast({ msg, type });
+  }, []);
   const [nvidiaKey, setNvidiaKey] = useState('');
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState('dark');
   const [boardsLoaded, setBoardsLoaded] = useState(false);
+
+  // Pomodoro Focus Timer State
+  const [timerMinutes, setTimerMinutes] = useState(25);
+  const [timerSeconds, setTimerSeconds] = useState(25 * 60);
+  const [timerActive, setTimerActive] = useState(false);
+  const [timerMode, setTimerMode] = useState('work'); // 'work' | 'break'
+  const [timerCollapsed, setTimerCollapsed] = useState(true);
+  const [timerTotalDuration, setTimerTotalDuration] = useState(25 * 60);
+
+  // Draggable Focus Timer Position State
+  const [timerPosition, setTimerPosition] = useState({ x: null, y: null });
+  const [timerCorner, setTimerCorner] = useState('top-right');
+  const [isDraggingTimer, setIsDraggingTimer] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Flashcards State
+  const [flashcardBoardId, setFlashcardBoardId] = useState('default');
+  const [flashcardIndex, setFlashcardIndex] = useState(0);
+  const [flashcardFlipped, setFlashcardFlipped] = useState(false);
+
+  // Mock Interview State
+  const [mockBoardId, setMockBoardId] = useState('default');
+  const [mockQCount, setMockQCount] = useState(5);
+  const [mockQuestions, setMockQuestions] = useState([]);
+  const [mockAnswers, setMockAnswers] = useState([]); // Array of { question: string, answer: string }
+  const [mockIndex, setMockIndex] = useState(0);
+  const [mockActive, setMockActive] = useState(false);
+  const [mockCompleted, setMockCompleted] = useState(false);
+  const [mockReport, setMockReport] = useState(null);
+  const [mockEvaluating, setMockEvaluating] = useState(false);
+  const [mockRecording, setMockRecording] = useState(false);
+  const [mockCurrentAnswer, setMockCurrentAnswer] = useState('');
+
+  // Target Date & Daily Goals State
+  const [targetDate, setTargetDate] = useState('');
+  const [dailyGoal, setDailyGoal] = useState(5);
+  const [studyDates, setStudyDates] = useState({});
+  const [activityLoaded, setActivityLoaded] = useState(false);
+
+  // Focus Alert Monitor States
+  const [focusMonitorActive, setFocusMonitorActive] = useState(false);
+  const [lastInteractionTime, setLastInteractionTime] = useState(0);
+
+  // Logging daily study activity for heatmap
+  const logStudyActivity = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    setStudyDates(prev => {
+      const next = { ...prev, [today]: (prev[today] || 0) + 1 };
+      // Save instantly to backend
+      fetch('/api/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studyDates: next })
+      }).catch(err => console.error('Error saving study date activity:', err));
+      return next;
+    });
+  }, []);
+
+  // ─── Community Questions Fetcher Handlers ────────────────────────────────────
+
+  const handleFetchQuestions = useCallback(async () => {
+    if (fetcherSources.length === 0) {
+      showToast('Please select at least one source.', 'error');
+      return;
+    }
+    setFetcherLoading(true);
+    setFetchedQuestions([]);
+    setSelectedFetched(new Set());
+    setFetcherMeta(null);
+
+    try {
+      const res = await fetch('/api/fetch-community-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ experience: fetcherExp, sources: fetcherSources }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        showToast(data.error || 'Failed to fetch questions.', 'error');
+        return;
+      }
+
+      setFetchedQuestions(data.questions || []);
+      setFetcherMeta(data.meta || null);
+      setSelectedFetched(new Set(data.questions.map(q => q.id)));
+      setFetcherStep('results');
+    } catch (err) {
+      showToast('Network error while fetching questions.', 'error');
+    } finally {
+      setFetcherLoading(false);
+    }
+  }, [fetcherExp, fetcherSources, showToast]);
+
+  const handleImportFetched = useCallback(() => {
+    const targetId = fetcherTargetBoard || activeBoardId;
+    const toImport = fetchedQuestions.filter(q => selectedFetched.has(q.id));
+
+    if (toImport.length === 0) {
+      showToast('No questions selected to import.', 'error');
+      return;
+    }
+
+    const newQuestions = toImport.map(q => ({
+      id: genId(),
+      text: q.question,
+      status: 'To Do',
+      category: q.tags?.[0] || 'General',
+      notes: [
+        q.hint ? `💡 Hint: ${q.hint}` : '',
+        q.sourceUrl ? `🔗 Source: ${q.sourceUrl}` : '',
+        q.source === 'reddit' ? '🟠 Sourced from Community / Reddit' : '🔵 Sourced from Stack Overflow',
+      ].filter(Boolean).join('\n'),
+      aiAnalysis: '',
+      tags: q.tags || [],
+      createdAt: new Date().toISOString(),
+    }));
+
+    setTrackerBoards(prev => prev.map(board => {
+      if (board.id === targetId) {
+        return { ...board, questions: [...(board.questions || []), ...newQuestions] };
+      }
+      return board;
+    }));
+
+    showToast(`✅ Imported ${toImport.length} questions into your study board!`, 'success');
+    setFetcherOpen(false);
+    setFetcherStep('config');
+    setFetchedQuestions([]);
+    setSelectedFetched(new Set());
+    // Navigate to the Progress Tracker tab and show the target board
+    setActiveBoardId(targetId);
+    setActiveTab('tracker');
+    logStudyActivity();
+  }, [fetchedQuestions, selectedFetched, fetcherTargetBoard, activeBoardId, setTrackerBoards, showToast, logStudyActivity]);
+
+  // Draggable Focus Timer logic
+  const handleTimerMouseDown = useCallback((e) => {
+    // Prevent dragging when clicking buttons, selects, inputs, or close icons
+    if (
+      e.target.tagName === 'BUTTON' ||
+      e.target.tagName === 'INPUT' ||
+      e.target.tagName === 'SELECT' ||
+      e.target.className.includes('focus-timer-close')
+    ) {
+      return;
+    }
+
+    // Only support left click drag
+    if (e.button !== 0) return;
+
+    e.preventDefault();
+    setIsDraggingTimer(true);
+
+    const container = document.getElementById('floating-focus-timer');
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingTimer) return;
+
+      // Calculate clamped position (ensuring timer stays fully visible inside bounds)
+      const w = timerCollapsed ? 120 : 280;
+      const h = timerCollapsed ? 40 : 280;
+
+      const nextX = Math.max(10, Math.min(window.innerWidth - w - 10, e.clientX - dragOffset.x));
+      const nextY = Math.max(10, Math.min(window.innerHeight - h - 10, e.clientY - dragOffset.y));
+
+      setTimerPosition({ x: nextX, y: nextY });
+    };
+
+    const handleMouseUp = (e) => {
+      if (!isDraggingTimer) return;
+      setIsDraggingTimer(false);
+
+      const w = timerCollapsed ? 120 : 280;
+      const h = timerCollapsed ? 40 : 280;
+      const margin = 24;
+
+      // Current coordinates relative to target element position
+      const currentX = e.clientX - dragOffset.x;
+      const currentY = e.clientY - dragOffset.y;
+
+      // Layout boundary coordinate anchors for corners
+      const corners = {
+        'top-left': { x: margin, y: margin },
+        'top-right': { x: window.innerWidth - w - margin, y: margin },
+        'bottom-left': { x: margin, y: window.innerHeight - h - margin },
+        'bottom-right': { x: window.innerWidth - w - margin, y: window.innerHeight - h - margin }
+      };
+
+      let bestCorner = 'top-right';
+      let minDistance = Infinity;
+
+      Object.entries(corners).forEach(([name, coords]) => {
+        const dx = currentX - coords.x;
+        const dy = currentY - coords.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestCorner = name;
+        }
+      });
+
+      setTimerCorner(bestCorner);
+      setTimerPosition({ x: null, y: null });
+    };
+
+    if (isDraggingTimer) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingTimer, dragOffset, timerCollapsed]);
 
   function toggleTheme() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -1298,9 +1546,255 @@ export default function Home() {
     }).catch(err => console.error('Save boards error:', err));
   }, [trackerBoards, mounted, boardsLoaded]);
 
-  const showToast = useCallback((msg, type = 'success') => {
-    setToast({ msg, type });
+  // Load study activity on mount
+  useEffect(() => {
+    if (!mounted) return;
+    fetch('/api/activity')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.activity) {
+          setTargetDate(data.activity.targetDate || '');
+          setDailyGoal(data.activity.dailyGoal || 5);
+          setStudyDates(data.activity.studyDates || {});
+        }
+        setActivityLoaded(true);
+      })
+      .catch(err => {
+        console.error('Failed to load study activity:', err);
+        setActivityLoaded(true);
+      });
+  }, [mounted]);
+
+  // Save study activity (targetDate and dailyGoal) when updated
+  useEffect(() => {
+    if (!mounted || !activityLoaded) return;
+    fetch('/api/activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetDate, dailyGoal })
+    }).catch(err => console.error('Save targetDate/goal error:', err));
+  }, [targetDate, dailyGoal, mounted, activityLoaded]);
+
+  // Pomodoro Focus Timer ticker
+  useEffect(() => {
+    let interval = null;
+    if (timerActive && timerSeconds > 0) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => prev - 1);
+      }, 1000);
+    } else if (timerActive && timerSeconds === 0) {
+      // Alarm Beep using Web Audio API (cross-browser offline sound)
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.6);
+      } catch (e) {
+        console.error('Audio synthesis failed:', e);
+      }
+
+      showToast(timerMode === 'work' ? '🏆 Work block completed! Take a break.' : '💪 Break finished! Time to focus.', 'success');
+
+      // Auto switch Pomodoro modes
+      const nextMode = timerMode === 'work' ? 'break' : 'work';
+      const duration = nextMode === 'work' ? 25 * 60 : 5 * 60;
+      setTimerMode(nextMode);
+      setTimerSeconds(duration);
+      setTimerTotalDuration(duration);
+      setTimerActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [timerActive, timerSeconds, timerMode, showToast]);
+
+  // Update last interaction timestamp when study boards change
+  useEffect(() => {
+    setLastInteractionTime(Date.now());
+  }, [trackerBoards]);
+
+  // Focus Alert Monitor idle check & warning beep alert
+  useEffect(() => {
+    let interval = null;
+    if (focusMonitorActive) {
+      interval = setInterval(() => {
+        const idleTime = Date.now() - lastInteractionTime;
+        // Beep if idle for 10 minutes (600,000 ms)
+        if (idleTime >= 600000) {
+          try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            // First alert tone (Low E)
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'triangle';
+            osc1.frequency.setValueAtTime(330, audioCtx.currentTime); // E4 note
+            gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.start();
+            osc1.stop(audioCtx.currentTime + 0.25);
+
+            // Second alert tone (High A)
+            setTimeout(() => {
+              try {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.type = 'triangle';
+                osc2.frequency.setValueAtTime(440, audioCtx.currentTime); // A4 note
+                gain2.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.start();
+                osc2.stop(audioCtx.currentTime + 0.25);
+              } catch (innerErr) { }
+            }, 180);
+          } catch (e) {
+            console.error('Focus monitor alert beep failed:', e);
+          }
+          showToast('Focus alert: No study progress detected in the last 10 minutes!', 'warning');
+        }
+      }, 10000); // Check idle duration every 10 seconds for responsive feedback
+    }
+    return () => clearInterval(interval);
+  }, [focusMonitorActive, lastInteractionTime, showToast]);
+
+  // Deterministic date formatting helpers to prevent hydration mismatches
+  const formatDeterministicDate = useCallback((dateStr) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(month, 10) - 1];
+    return `${parseInt(day, 10)} ${monthName} ${year}`;
   }, []);
+
+  const formatDeterministicMonthYear = useCallback((dateStr) => {
+    if (!dateStr) return '';
+    const [year, month] = dateStr.split('-');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthName = months[parseInt(month, 10) - 1];
+    const shortYear = year.slice(-2);
+    return `${monthName} '${shortYear}`;
+  }, []);
+
+  const formatDeterministicLongDate = useCallback((dateStr) => {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = months[parseInt(month, 10) - 1];
+    return `${monthName} ${parseInt(day, 10)}, ${year}`;
+  }, []);
+
+  // Utility helpers for streaks, countdowns and goals
+  const getDaysRemaining = useCallback(() => {
+    if (!targetDate) return null;
+    const target = new Date(targetDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+    const diff = target.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }, [targetDate]);
+
+  const getQuestionsCompletedToday = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return studyDates[today] || 0;
+  }, [studyDates]);
+
+  const generateHeatmapDates = useCallback(() => {
+    const dates = [];
+    const today = new Date();
+    const start = new Date(today);
+    // Go back 18 weeks (ending today)
+    start.setDate(today.getDate() - (18 * 7) - today.getDay());
+
+    for (let i = 0; i <= (18 * 7) + today.getDay(); i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const count = studyDates[dateStr] || 0;
+
+      let level = 0;
+      if (count > 0 && count <= 2) level = 1;
+      else if (count > 2 && count <= 5) level = 2;
+      else if (count > 5 && count <= 9) level = 3;
+      else if (count > 9) level = 4;
+
+      dates.push({
+        dateStr,
+        count,
+        level,
+        dayOfWeek: d.getDay(),
+        dateObj: d
+      });
+    }
+    return dates;
+  }, [studyDates]);
+
+  const calculateStreaks = useCallback(() => {
+    const dates = Object.keys(studyDates).sort();
+    if (dates.length === 0) return { current: 0, longest: 0 };
+
+    let longest = 0;
+    let current = 0;
+    let running = 0;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    // Longest streak
+    let prevDate = null;
+    const uniqueStudyDays = dates.filter(d => studyDates[d] > 0);
+
+    uniqueStudyDays.forEach(dateStr => {
+      const curDate = new Date(dateStr);
+      if (!prevDate) {
+        running = 1;
+      } else {
+        const diffTime = Math.abs(curDate - prevDate);
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          running += 1;
+        } else if (diffDays > 1) {
+          longest = Math.max(longest, running);
+          running = 1;
+        }
+      }
+      prevDate = curDate;
+    });
+    longest = Math.max(longest, running);
+
+    // Current streak
+    const hasStudiedToday = studyDates[todayStr] > 0;
+    const hasStudiedYesterday = studyDates[yesterdayStr] > 0;
+
+    if (hasStudiedToday || hasStudiedYesterday) {
+      let checkDate = hasStudiedToday ? new Date() : yesterday;
+      current = 0;
+      while (true) {
+        const checkStr = checkDate.toISOString().slice(0, 10);
+        if (studyDates[checkStr] > 0) {
+          current += 1;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    } else {
+      current = 0;
+    }
+
+    return { current, longest };
+  }, [studyDates]);
 
   function addPost(post) {
     setPosts((prev) => [post, ...prev]);
@@ -1543,16 +2037,40 @@ export default function Home() {
     });
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${mobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+      {/* Mobile Header (Visible only on small screens) */}
+      <div className="mobile-header">
+        <div className="logo">
+          <div className="logo-icon">🎯</div>
+          <span className="logo-text">SDET Co-Pilot</span>
+        </div>
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Toggle Menu"
+        >
+          {mobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
+      {/* Backdrop for mobile menu */}
+      {mobileMenuOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
-      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+      <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileMenuOpen ? 'open' : ''}`}>
         <div>
           {/* Logo (Acts as Sidebar Collapse Toggler) */}
-          <div 
-            className="sidebar-logo" 
-            style={{ 
-              margin: '0 0 24px 0', 
-              padding: '0 8px', 
+          <div
+            className="sidebar-logo"
+            style={{
+              margin: '0 0 24px 0',
+              padding: '0 8px',
               cursor: 'pointer',
               userSelect: 'none'
             }}
@@ -1562,35 +2080,71 @@ export default function Home() {
             🎯 <span>SDET Co-Pilot</span>
           </div>
 
-          
+
           <nav className="sidebar-menu">
-            <div 
+            <div
               className={`sidebar-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-              onClick={() => setActiveTab('dashboard')}
+              onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
               title={sidebarCollapsed ? 'Dashboard' : ''}
             >
               📊 <span>Dashboard</span>
             </div>
-            <div 
+            <div
               className={`sidebar-item ${activeTab === 'resources' ? 'active' : ''}`}
-              onClick={() => setActiveTab('resources')}
+              onClick={() => { setActiveTab('resources'); setMobileMenuOpen(false); }}
               title={sidebarCollapsed ? 'Study Resources' : ''}
             >
               📋 <span>Study Resources</span>
             </div>
-            <div 
+            <div
               className={`sidebar-item ${activeTab === 'prep' ? 'active' : ''}`}
-              onClick={() => setActiveTab('prep')}
+              onClick={() => { setActiveTab('prep'); setMobileMenuOpen(false); }}
               title={sidebarCollapsed ? 'Prep Generator' : ''}
             >
               🎯 <span>Prep Generator</span>
             </div>
-            <div 
+            <div
               className={`sidebar-item ${activeTab === 'tracker' ? 'active' : ''}`}
-              onClick={() => setActiveTab('tracker')}
+              onClick={() => { setActiveTab('tracker'); setMobileMenuOpen(false); }}
               title={sidebarCollapsed ? 'Progress Tracker' : ''}
             >
               📅 <span>Progress Tracker</span>
+            </div>
+            <div
+              className={`sidebar-item ${activeTab === 'flashcards' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('flashcards');
+                setFlashcardFlipped(false);
+                setMobileMenuOpen(false);
+              }}
+              title={sidebarCollapsed ? 'Flashcards' : ''}
+            >
+              🎴 <span>Flashcards</span>
+            </div>
+            <div
+              className={`sidebar-item ${activeTab === 'mock-interview' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('mock-interview');
+                setMobileMenuOpen(false);
+              }}
+              title={sidebarCollapsed ? 'Mock Interview' : ''}
+            >
+              🎙️ <span>Mock Interview</span>
+            </div>
+
+            {/* Fetch Live Questions — special highlighted nav item */}
+            <div
+              className="sidebar-item sidebar-item-fetch"
+              onClick={() => {
+                setFetcherOpen(true);
+                setFetcherStep('config');
+                setFetchedQuestions([]);
+                setFetcherTargetBoard(activeBoardId || '');
+                setMobileMenuOpen(false);
+              }}
+              title={sidebarCollapsed ? 'Fetch Live Questions' : ''}
+            >
+              🌐 <span>Fetch Live Q&amp;As</span>
             </div>
           </nav>
         </div>
@@ -1660,11 +2214,136 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Countdown & Daily Goals Section */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: 16
+            }}>
+              {/* Countdown Card */}
+              <div className="dashboard-section" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>🎯 Target Interview Date</span>
+                  {getDaysRemaining() !== null && (
+                    <span className="countdown-pill">
+                      {getDaysRemaining() > 0 ? `🔥 ${getDaysRemaining()} Days Left` : getDaysRemaining() === 0 ? '🏁 Today is the Day!' : '🎉 Target Passed'}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => setTargetDate(e.target.value)}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      fontSize: 13,
+                      flex: 1
+                    }}
+                  />
+                  {targetDate && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setTargetDate('')}
+                      style={{ padding: '8px 12px' }}
+                      title="Clear target date"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0 }}>
+                  {targetDate
+                    ? `Your interview is scheduled for ${formatDeterministicLongDate(targetDate)}.`
+                    : 'Set your target interview date to track time remaining and build urgency!'}
+                </p>
+              </div>
+
+              {/* Daily Goal Card */}
+              <div className="dashboard-section" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: 20 }}>
+                {/* SVG Goal Circle */}
+                {(() => {
+                  const completed = getQuestionsCompletedToday();
+                  const target = dailyGoal || 5;
+                  const pct = Math.min(100, Math.round((completed / target) * 100));
+                  const radius = 35;
+                  const circ = 2 * Math.PI * radius;
+                  const strokeOffset = circ - (pct / 100) * circ;
+
+                  return (
+                    <>
+                      <div className="goal-ring-container">
+                        <svg width="86" height="86" style={{ transform: 'rotate(-90deg)' }}>
+                          <circle
+                            cx="43"
+                            cy="43"
+                            r={radius}
+                            fill="none"
+                            stroke="rgba(255, 255, 255, 0.05)"
+                            strokeWidth="6"
+                          />
+                          <circle
+                            cx="43"
+                            cy="43"
+                            r={radius}
+                            fill="none"
+                            stroke="var(--accent-green)"
+                            strokeWidth="6"
+                            strokeDasharray={circ}
+                            strokeDashoffset={strokeOffset}
+                            strokeLinecap="round"
+                            style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                          />
+                        </svg>
+                        <div className="goal-ring-text">
+                          {pct}%
+                        </div>
+                      </div>
+
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-secondary)' }}>⚡ Daily Study Target</span>
+                        <strong style={{ fontSize: 18, color: 'var(--text-primary)' }}>
+                          {completed} / {target} questions
+                        </strong>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 8px', fontSize: 11 }}
+                            onClick={() => setDailyGoal(prev => Math.max(1, prev - 1))}
+                            disabled={dailyGoal <= 1}
+                          >
+                            -
+                          </button>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Goal: {dailyGoal}</span>
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 8px', fontSize: 11 }}
+                            onClick={() => setDailyGoal(prev => prev + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+
             {/* Resources Stats Summary */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-              gap: 16 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 16
             }}>
               <div className="dashboard-stat-card">
                 <div className="dashboard-stat-icon">🏢</div>
@@ -1704,15 +2383,15 @@ export default function Home() {
             </div>
 
             {/* Progress & Charts Section */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', 
-              gap: 20 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))',
+              gap: 20
             }}>
               {/* Overall Progress Tracker Summary */}
               <div className="dashboard-section">
                 <h3 className="dashboard-section-title">📊 Overall Study Progress</h3>
-                
+
                 {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
                     No questions in Progress Tracker yet. Import a guide or add questions to view stats.
@@ -1789,7 +2468,7 @@ export default function Home() {
               {/* Topic Distribution Chart */}
               <div className="dashboard-section">
                 <h3 className="dashboard-section-title">🏷️ Top Study Categories</h3>
-                
+
                 {trackerBoards.flatMap(b => b.questions || []).length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '30px 10px', color: 'var(--text-muted)', fontSize: 13 }}>
                     No topics categorized yet. Polished question tags will be listed here.
@@ -1816,11 +2495,11 @@ export default function Home() {
                               <span style={{ color: 'var(--text-muted)' }}>{count} questions ({pct}%)</span>
                             </div>
                             <div style={{ background: 'var(--border)', height: 6, borderRadius: 3, overflow: 'hidden' }}>
-                              <div style={{ 
-                                background: 'linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%)', 
-                                width: `${pct}%`, 
-                                height: '100%', 
-                                borderRadius: 3 
+                              <div style={{
+                                background: 'linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-purple) 100%)',
+                                width: `${pct}%`,
+                                height: '100%',
+                                borderRadius: 3
                               }} />
                             </div>
                           </div>
@@ -1849,8 +2528,8 @@ export default function Home() {
                     const inProgress = board.questions.filter(q => q.status === 'In Progress').length;
                     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
                     return (
-                      <div 
-                        key={board.id} 
+                      <div
+                        key={board.id}
                         className="dashboard-board-card"
                         onClick={() => {
                           setActiveBoardId(board.id);
@@ -1860,11 +2539,11 @@ export default function Home() {
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'flex-start' }}>
                           <span style={{ fontWeight: 700, fontSize: 14 }}>📂 {board.name}</span>
-                          <span style={{ 
-                            fontSize: 11, 
-                            background: pct === 100 ? 'var(--accent-green-dim)' : 'rgba(255,255,255,0.06)', 
+                          <span style={{
+                            fontSize: 11,
+                            background: pct === 100 ? 'var(--accent-green-dim)' : 'rgba(255,255,255,0.06)',
                             color: pct === 100 ? 'var(--accent-green)' : 'var(--text-muted)',
-                            padding: '2px 8px', 
+                            padding: '2px 8px',
                             borderRadius: 99,
                             fontWeight: 600
                           }}>
@@ -1879,12 +2558,12 @@ export default function Home() {
                           <span style={{ color: 'var(--accent-green)' }}>{done} done</span>
                         </div>
                         <div style={{ background: 'var(--border)', height: 5, borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ 
-                            width: `${pct}%`, 
-                            height: '100%', 
-                            background: pct === 100 
-                              ? 'var(--accent-green)' 
-                              : 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))', 
+                          <div style={{
+                            width: `${pct}%`,
+                            height: '100%',
+                            background: pct === 100
+                              ? 'var(--accent-green)'
+                              : 'linear-gradient(90deg, var(--accent-blue), var(--accent-green))',
                             borderRadius: 3,
                             transition: 'width 0.4s ease'
                           }} />
@@ -1895,17 +2574,71 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Study Consistency Heatmap & Streaks */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 }}>
+              {/* Heatmap Card */}
+              <div className="dashboard-section" style={{ flex: 2 }}>
+                <h3 className="dashboard-section-title">📅 Study Consistency Heatmap</h3>
+                <div className="heatmap-wrapper">
+                  <div className="heatmap-grid">
+                    {generateHeatmapDates().map((cell) => (
+                      <div
+                        key={cell.dateStr}
+                        className={`heatmap-cell level-${cell.level}`}
+                        title={`${cell.count} questions studied on ${formatDeterministicDate(cell.dateStr)}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="heatmap-labels" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                    <span>{formatDeterministicMonthYear(generateHeatmapDates()[0].dateStr)}</span>
+                    <span>Today</span>
+                  </div>
+                  <div className="heatmap-legend" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-muted)', alignSelf: 'flex-end', marginTop: 8 }}>
+                    <span>Less</span>
+                    <div className="heatmap-cell level-0" />
+                    <div className="heatmap-cell level-1" />
+                    <div className="heatmap-cell level-2" />
+                    <div className="heatmap-cell level-3" />
+                    <div className="heatmap-cell level-4" />
+                    <span>More</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Streaks Card */}
+              {(() => {
+                const streaks = calculateStreaks();
+                return (
+                  <div className="dashboard-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <h3 className="dashboard-section-title">🔥 Study Streaks</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, alignItems: 'center' }}>
+                      <div style={{ background: 'rgba(255, 107, 107, 0.08)', border: '1px solid rgba(255, 107, 107, 0.2)', padding: '16px', borderRadius: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 32, marginBottom: 6 }}>🔥</div>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Current Streak</span>
+                        <strong style={{ fontSize: 24, color: '#ff6b6b' }}>{streaks.current} Days</strong>
+                      </div>
+                      <div style={{ background: 'var(--accent-amber-dim)', border: '1px solid rgba(245, 166, 35, 0.2)', padding: '16px', borderRadius: 12, textAlign: 'center' }}>
+                        <div style={{ fontSize: 32, marginBottom: 6 }}>🏆</div>
+                        <span style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', textTransform: 'uppercase' }}>Longest Streak</span>
+                        <strong style={{ fontSize: 24, color: 'var(--accent-amber)' }}>{streaks.longest} Days</strong>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 
         {activeTab === 'resources' && (
           <>
             {/* Resources Summary Stats */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
-              gap: 16, 
-              marginBottom: 24 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 16,
+              marginBottom: 24
             }}>
               <div style={{
                 background: 'var(--bg-card)',
@@ -2033,15 +2766,15 @@ export default function Home() {
                       transition: 'all 0.2s ease',
                       cursor: 'pointer'
                     }}
-                    onClick={() => setViewingPost(post)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--accent-blue)';
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
+                      onClick={() => setViewingPost(post)}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--accent-blue)';
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--border)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                      }}
                     >
                       {/* Header */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -2084,9 +2817,9 @@ export default function Home() {
                       </div>
 
                       {/* Content Preview */}
-                      <div style={{ 
-                        fontSize: 13, 
-                        lineHeight: 1.6, 
+                      <div style={{
+                        fontSize: 13,
+                        lineHeight: 1.6,
                         color: 'var(--text-secondary)',
                         flexGrow: 1,
                         overflow: 'hidden',
@@ -2286,6 +3019,545 @@ export default function Home() {
           </div>
         )}
 
+        {/* 🎴 Flashcards View */}
+        {activeTab === 'flashcards' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: '24px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>🎴 Flashcard Review</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Test your memory. Flip cards to view AI answers, and update your tracker boards directly.
+                </p>
+              </div>
+
+              {/* Select Board */}
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Study Board:</span>
+                <select
+                  value={flashcardBoardId}
+                  onChange={(e) => {
+                    setFlashcardBoardId(e.target.value);
+                    setFlashcardIndex(0);
+                    setFlashcardFlipped(false);
+                  }}
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '6px 12px',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'inherit',
+                    fontSize: 13
+                  }}
+                >
+                  {trackerBoards.map(b => (
+                    <option key={b.id} value={b.id}>
+                      {b.name} ({b.questions.length} cards)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {(() => {
+              const selectedBoard = trackerBoards.find(b => b.id === flashcardBoardId) || trackerBoards[0];
+              const cards = selectedBoard ? selectedBoard.questions : [];
+
+              if (cards.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>🎴</div>
+                    <h3>No cards in this board</h3>
+                    <p style={{ fontSize: 13 }}>Add questions to this board in Progress Tracker or Prep Generator to review flashcards.</p>
+                  </div>
+                );
+              }
+
+              const card = cards[flashcardIndex] || cards[0];
+
+              return (
+                <div className="flashcards-container">
+                  {/* Progress Indicator */}
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
+                    <span>Card {flashcardIndex + 1} of {cards.length}</span>
+                    <span>{Math.round(((flashcardIndex + 1) / cards.length) * 100)}% reviewed</span>
+                  </div>
+
+                  {/* 3D Flashcard */}
+                  <div className="flashcard-perspective" onClick={() => setFlashcardFlipped(!flashcardFlipped)}>
+                    <div className={`flashcard-inner ${flashcardFlipped ? 'flipped' : ''}`}>
+                      {/* Front Side */}
+                      <div className="flashcard-face flashcard-front">
+                        <span className="flashcard-category">{card.category}</span>
+                        <h3 className="flashcard-question-text">{card.text}</h3>
+                        <div className="flashcard-prompt-flip">
+                          <span>🔄 Click card to flip and view answer</span>
+                        </div>
+                      </div>
+
+                      {/* Back Side */}
+                      <div className="flashcard-face flashcard-back">
+                        <span className="flashcard-category" style={{ background: 'var(--accent-green-dim)', color: 'var(--accent-green)' }}>
+                          AI Recommendation & Notes
+                        </span>
+                        <div className="flashcard-answer-text">
+                          {card.aiAnalysis || card.notes || 'No review notes or AI answer generated yet for this question. You can trigger "Generate Answer" in the Progress Tracker tab.'}
+                        </div>
+                        <div className="flashcard-prompt-flip" style={{ marginTop: 'auto' }}>
+                          <span>🔄 Click card to return to question</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Flashcard Actions & Navigation */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', alignItems: 'center' }}>
+                    <div className="flashcard-actions">
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Mark as In Progress (Needs Review)
+                          setTrackerBoards(prev => prev.map(b => {
+                            if (b.id === flashcardBoardId) {
+                              const updatedQ = b.questions.map(q => q.id === card.id ? { ...q, status: 'In Progress' } : q);
+                              return { ...b, questions: updatedQ };
+                            }
+                            return b;
+                          }));
+                          showToast('Marked card for review');
+                          if (flashcardIndex < cards.length - 1) {
+                            setFlashcardIndex(prev => prev + 1);
+                            setFlashcardFlipped(false);
+                          }
+                        }}
+                      >
+                        ⚠️ Needs Review
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-success"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Mark as Done (Learned)
+                          setTrackerBoards(prev => prev.map(b => {
+                            if (b.id === flashcardBoardId) {
+                              const updatedQ = b.questions.map(q => q.id === card.id ? { ...q, status: 'Done' } : q);
+                              return { ...b, questions: updatedQ };
+                            }
+                            return b;
+                          }));
+                          showToast('Marked card as learned!');
+                          if (flashcardIndex < cards.length - 1) {
+                            setFlashcardIndex(prev => prev + 1);
+                            setFlashcardFlipped(false);
+                          }
+                        }}
+                      >
+                        ✅ Learned
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={flashcardIndex === 0}
+                        onClick={() => {
+                          setFlashcardIndex(prev => prev - 1);
+                          setFlashcardFlipped(false);
+                        }}
+                      >
+                        ⬅️ Previous
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={flashcardIndex === cards.length - 1}
+                        onClick={() => {
+                          setFlashcardIndex(prev => prev + 1);
+                          setFlashcardFlipped(false);
+                        }}
+                      >
+                        Next ➡️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 🎙️ Mock Interview View */}
+        {activeTab === 'mock-interview' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: '24px 0' }}>
+            <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: 16 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>🎙️ AI Mock Interview</h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                Test your SDET knowledge in a simulated verbal interview scored by AI.
+              </p>
+            </div>
+
+            {/* Setup Mode */}
+            {!mockActive && !mockCompleted && (
+              <div className="dashboard-section" style={{ maxWidth: 500, margin: '20px auto', width: '100%', padding: 24, gap: 16 }}>
+                <h3 style={{ margin: 0, fontSize: 16 }}>Configure Interview</h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Select Question Board</label>
+                  <select
+                    value={mockBoardId}
+                    onChange={(e) => setMockBoardId(e.target.value)}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      fontSize: 13
+                    }}
+                  >
+                    {trackerBoards.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.questions.length} questions available)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Number of Questions</label>
+                  <select
+                    value={mockQCount}
+                    onChange={(e) => setMockQCount(parseInt(e.target.value, 10))}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      fontSize: 13
+                    }}
+                  >
+                    <option value={3}>3 Questions (Quick Practice)</option>
+                    <option value={5}>5 Questions (Standard Practice)</option>
+                    <option value={10}>10 Questions (Full Interview)</option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ width: '100%', padding: '10px 0', fontSize: 14, fontWeight: 700 }}
+                  onClick={() => {
+                    const board = trackerBoards.find(b => b.id === mockBoardId) || trackerBoards[0];
+                    if (!board || board.questions.length === 0) {
+                      showToast('Select a board that has questions to start.', 'error');
+                      return;
+                    }
+                    // Shuffle and pick QCount questions
+                    const shuffled = [...board.questions].sort(() => 0.5 - Math.random());
+                    const picked = shuffled.slice(0, mockQCount);
+                    setMockQuestions(picked);
+                    setMockAnswers([]);
+                    setMockIndex(0);
+                    setMockActive(true);
+                    setMockCompleted(false);
+                    setMockCurrentAnswer('');
+                  }}
+                >
+                  🎙️ Start Interview
+                </button>
+              </div>
+            )}
+
+            {/* Active Interview Mode */}
+            {mockActive && mockQuestions.length > 0 && (
+              <div style={{ maxWidth: 680, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-muted)' }}>
+                  <span>Question {mockIndex + 1} of {mockQuestions.length}</span>
+                  <span style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>Active Session</span>
+                </div>
+
+                {/* Card */}
+                <div className="dashboard-section" style={{ padding: 24, gap: 16 }}>
+                  <span className="tag" style={{ background: 'var(--accent-blue-dim)', color: 'var(--accent-blue)', fontSize: 10, alignSelf: 'flex-start', padding: '2px 8px', borderRadius: 99 }}>
+                    {mockQuestions[mockIndex].category}
+                  </span>
+                  <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, lineHeight: 1.5 }}>
+                    {mockQuestions[mockIndex].text}
+                  </h3>
+                </div>
+
+                {/* Voice Dictation Output & Waveform Animation */}
+                {mockRecording && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyStyle: 'center', gap: 12, padding: 14, background: 'rgba(79, 142, 247, 0.08)', borderRadius: 12, border: '1px solid rgba(79, 142, 247, 0.2)' }}>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      <span style={{ width: 3, height: 16, background: 'var(--accent-blue)', borderRadius: 2, animation: 'float 0.8s ease-in-out infinite' }} />
+                      <span style={{ width: 3, height: 24, background: 'var(--accent-blue)', borderRadius: 2, animation: 'float 0.8s ease-in-out infinite 0.15s' }} />
+                      <span style={{ width: 3, height: 12, background: 'var(--accent-blue)', borderRadius: 2, animation: 'float 0.8s ease-in-out infinite 0.3s' }} />
+                      <span style={{ width: 3, height: 28, background: 'var(--accent-blue)', borderRadius: 2, animation: 'float 0.8s ease-in-out infinite 0.45s' }} />
+                    </div>
+                    <span style={{ fontSize: 12, color: 'var(--accent-blue)', fontWeight: 600 }}>Listening to your voice... Speak clearly.</span>
+                  </div>
+                )}
+
+                {/* Answer Area */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Your Answer</label>
+                  <textarea
+                    rows={6}
+                    placeholder="Type your technical response here, or click Speak Answer to dictate verbally..."
+                    value={mockCurrentAnswer}
+                    onChange={(e) => setMockCurrentAnswer(e.target.value)}
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 12,
+                      padding: '12px 16px',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'inherit',
+                      fontSize: 14,
+                      lineHeight: '1.6',
+                      width: '100%',
+                      resize: 'vertical'
+                    }}
+                  />
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Recording button */}
+                    {!mockRecording ? (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => {
+                          const SpeechReg = window.SpeechRecognition || window.webkitSpeechRecognition;
+                          if (!SpeechReg) {
+                            showToast('Speech recognition is not supported in this browser. Please type your response.', 'error');
+                            return;
+                          }
+                          const rec = new SpeechReg();
+                          rec.continuous = true;
+                          rec.interimResults = false;
+                          rec.lang = 'en-US';
+                          rec.onstart = () => {
+                            setMockRecording(true);
+                            showToast('Recording active. Speak now.');
+                          };
+                          rec.onresult = (evt) => {
+                            const result = evt.results[evt.results.length - 1][0].transcript;
+                            setMockCurrentAnswer(prev => prev + (prev ? ' ' : '') + result);
+                          };
+                          rec.onerror = () => setMockRecording(false);
+                          rec.onend = () => setMockRecording(false);
+                          window.activeSpeechRec = rec;
+                          rec.start();
+                        }}
+                      >
+                        🎙️ Speak Answer
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-danger btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        onClick={() => {
+                          if (window.activeSpeechRec) {
+                            window.activeSpeechRec.stop();
+                            window.activeSpeechRec = null;
+                          }
+                          setMockRecording(false);
+                        }}
+                      >
+                        🛑 Stop Recording
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={mockEvaluating}
+                      onClick={async () => {
+                        // Stop voice rec if active
+                        if (window.activeSpeechRec) {
+                          window.activeSpeechRec.stop();
+                          window.activeSpeechRec = null;
+                        }
+                        setMockRecording(false);
+
+                        const updatedAnswers = [
+                          ...mockAnswers,
+                          {
+                            question: mockQuestions[mockIndex].text,
+                            answer: mockCurrentAnswer.trim()
+                          }
+                        ];
+                        setMockAnswers(updatedAnswers);
+
+                        if (mockIndex < mockQuestions.length - 1) {
+                          setMockIndex(prev => prev + 1);
+                          setMockCurrentAnswer('');
+                        } else {
+                          // Complete session, call evaluation endpoint
+                          setMockEvaluating(true);
+                          setMockActive(false);
+                          setMockCompleted(true);
+                          try {
+                            const res = await fetch('/api/evaluate-interview', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ answers: updatedAnswers })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Evaluation failed.');
+                            setMockReport(data.report);
+                            logStudyActivity(); // Log mock interview completion in study heatmap
+                            showToast('AI interview evaluation generated successfully!', 'success');
+                          } catch (err) {
+                            showToast(err.message, 'error');
+                          } finally {
+                            setMockEvaluating(false);
+                          }
+                        }
+                      }}
+                    >
+                      {mockIndex < mockQuestions.length - 1 ? 'Next Question ➡️' : 'Finish & Grade 🏁'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Evaluation/Completed Mode */}
+            {mockCompleted && (
+              <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {mockEvaluating ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <div style={{ fontSize: 36, animation: 'float 2s infinite' }}>🤖</div>
+                    <h3 style={{ marginTop: 14 }}>SDET Co-Pilot is evaluating your interview...</h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Analyzing answers, computing scores, and writing ideal recommendations. This will take a few seconds.</p>
+                  </div>
+                ) : mockReport ? (
+                  <>
+                    {/* Scorecard Hero Panel */}
+                    <div className="dashboard-section" style={{
+                      padding: 24,
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 24,
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      borderLeft: `5px solid ${mockReport.verdict === 'Pass' ? 'var(--accent-green)' : mockReport.verdict === 'Borderline' ? 'var(--accent-amber)' : 'var(--accent-red)'}`
+                    }}>
+                      <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+                        <div style={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: '50%',
+                          background: mockReport.verdict === 'Pass' ? 'var(--accent-green-dim)' : 'rgba(255,255,255,0.06)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 24,
+                          fontWeight: 800,
+                          color: mockReport.verdict === 'Pass' ? 'var(--accent-green)' : 'var(--text-primary)'
+                        }}>
+                          {mockReport.overallScore}/10
+                        </div>
+                        <div>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Interview Verdict</span>
+                          <h2 style={{ fontSize: 24, fontWeight: 800, margin: '2px 0 0', color: mockReport.verdict === 'Pass' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
+                            {mockReport.verdict}
+                          </h2>
+                        </div>
+                      </div>
+
+                      <p style={{ flex: 1, minWidth: 260, fontSize: 13, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
+                        {mockReport.summary}
+                      </p>
+                    </div>
+
+                    {/* Question breakdown list */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Question Evaluations</h3>
+                      {mockReport.evaluations.map((evalItem, idx) => (
+                        <details
+                          key={idx}
+                          className="dashboard-section"
+                          style={{ padding: 18, cursor: 'pointer' }}
+                          open={idx === 0}
+                        >
+                          <summary style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, fontSize: 14 }}>
+                            <span>Q{idx + 1}: {evalItem.question}</span>
+                            <span style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              background: evalItem.score >= 8 ? 'var(--accent-green-dim)' : evalItem.score >= 5 ? 'var(--accent-amber-dim)' : 'var(--accent-red-dim)',
+                              color: evalItem.score >= 8 ? 'var(--accent-green)' : evalItem.score >= 5 ? 'var(--accent-amber)' : 'var(--accent-red)',
+                              padding: '2px 8px',
+                              borderRadius: 4
+                            }}>
+                              Score: {evalItem.score}/10
+                            </span>
+                          </summary>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 14, cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Your Answer</span>
+                              <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                                {evalItem.userAnswer || '(No answer provided)'}
+                              </p>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>AI Evaluation & Feedback</span>
+                              <p style={{ fontSize: 13, margin: 0, color: 'var(--text-secondary)' }}>
+                                {evalItem.feedback}
+                              </p>
+                            </div>
+
+                            <div style={{ background: 'var(--accent-blue-dim)', padding: 12, borderRadius: 8, border: '1px solid rgba(79, 142, 247, 0.2)' }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-blue)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Principal Recommended Answer</span>
+                              <p style={{ fontSize: 13, margin: 0, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                                {evalItem.idealAnswer}
+                              </p>
+                            </div>
+                          </div>
+                        </details>
+                      ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ alignSelf: 'center', padding: '10px 24px' }}
+                      onClick={() => {
+                        setMockCompleted(false);
+                        setMockActive(false);
+                        setMockReport(null);
+                      }}
+                    >
+                      🔄 Restart Interview Practice
+                    </button>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: 20 }}>
+                    <p style={{ color: 'var(--text-muted)' }}>Could not generate interview score report.</p>
+                    <button type="button" className="btn btn-secondary" onClick={() => setMockCompleted(false)}>Configure Again</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'tracker' && (
           <div className="tracker-container">
             {/* Boards Sub-tabs + Actions row */}
@@ -2293,11 +3565,11 @@ export default function Home() {
               {/* Tabs */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: 1 }}>
                 {trackerBoards.map(board => (
-                  <div 
-                    key={board.id} 
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
+                  <div
+                    key={board.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
                       background: activeBoardId === board.id ? 'var(--accent-blue-dim)' : 'var(--bg-card)',
                       border: '1px solid',
                       borderColor: activeBoardId === board.id ? 'var(--accent-blue)' : 'var(--border)',
@@ -2379,6 +3651,23 @@ export default function Home() {
                   }}
                 >
                   ＋ New Board
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${focusMonitorActive ? 'btn-danger' : 'btn-secondary'}`}
+                  onClick={() => {
+                    const nextActive = !focusMonitorActive;
+                    setFocusMonitorActive(nextActive);
+                    if (nextActive) {
+                      setLastInteractionTime(Date.now());
+                      showToast('Focus Monitor active: will beep if no board updates in 10 mins!', 'success');
+                    } else {
+                      showToast('Focus Monitor deactivated.');
+                    }
+                  }}
+                  title="Plays alert beeps if you do not update question statuses or study notes for 10 minutes"
+                >
+                  {focusMonitorActive ? '🔔 Monitor: Active' : '🔕 Start Monitor'}
                 </button>
               </div>
             </div>
@@ -2713,6 +4002,321 @@ export default function Home() {
       {toast && (
         <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />
       )}
+
+      {/* ── Community Questions Fetcher Modal ── */}
+      {fetcherOpen && (
+        <div className="fetcher-overlay" onClick={(e) => { if (e.target.className === 'fetcher-overlay') { setFetcherOpen(false); setFetcherStep('config'); } }}>
+          <div className="fetcher-modal">
+            {/* Header */}
+            <div className="fetcher-header">
+              <div>
+                <h2 className="fetcher-title">🌐 Fetch Live Community Questions</h2>
+                <p className="fetcher-subtitle">
+                  {fetcherStep === 'config'
+                    ? 'Pull real SDET interview questions from Reddit & Stack Overflow, filtered by experience level.'
+                    : fetcherMeta ? `Fetched from ${fetcherMeta.totalFetched} posts · ${fetcherMeta.extracted} questions extracted for ${fetcherMeta.experience}` : 'Review and select questions to import.'}
+                </p>
+              </div>
+              <button type="button" className="fetcher-close-btn" onClick={() => { setFetcherOpen(false); setFetcherStep('config'); }}>✕</button>
+            </div>
+
+            {/* Step 1: Config */}
+            {fetcherStep === 'config' && (
+              <div className="fetcher-body">
+                {/* Experience Level */}
+                <div className="fetcher-section">
+                  <label className="fetcher-label">🎓 Your Experience Level</label>
+                  <div className="fetcher-exp-tiles">
+                    {[
+                      { key: 'junior', emoji: '🟢', title: 'Junior', sub: '0–2 years', desc: 'Fundamentals, Selenium basics, TestNG/JUnit, basic API testing' },
+                      { key: 'mid', emoji: '🟡', title: 'Mid-Level', sub: '2–5 years', desc: 'Framework design, CI/CD, API automation, Page Object Model' },
+                      { key: 'senior', emoji: '🔴', title: 'Senior', sub: '5+ years', desc: 'Architecture, test strategy, leadership, system design' },
+                    ].map(exp => (
+                      <div
+                        key={exp.key}
+                        className={`fetcher-exp-tile ${fetcherExp === exp.key ? 'selected' : ''}`}
+                        onClick={() => setFetcherExp(exp.key)}
+                      >
+                        <div className="fetcher-exp-emoji">{exp.emoji}</div>
+                        <div className="fetcher-exp-title">{exp.title}</div>
+                        <div className="fetcher-exp-sub">{exp.sub}</div>
+                        <div className="fetcher-exp-desc">{exp.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sources */}
+                <div className="fetcher-section">
+                  <label className="fetcher-label">📡 Data Sources</label>
+                  <div className="fetcher-sources">
+                    {[
+                      { key: 'reddit', label: '🟠 Reddit', sub: 'r/QualityAssurance, r/cscareerquestions' },
+                      { key: 'stackoverflow', label: '🔵 Stack Overflow', sub: 'selenium, automation-testing tags' },
+                    ].map(src => (
+                      <div
+                        key={src.key}
+                        className={`fetcher-source-chip ${fetcherSources.includes(src.key) ? 'selected' : ''}`}
+                        onClick={() => setFetcherSources(prev =>
+                          prev.includes(src.key) ? prev.filter(s => s !== src.key) : [...prev, src.key]
+                        )}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{src.label}</div>
+                        <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{src.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Target Board */}
+                <div className="fetcher-section">
+                  <label className="fetcher-label">📋 Import to Board</label>
+                  <select
+                    className="fetcher-select"
+                    value={fetcherTargetBoard || activeBoardId}
+                    onChange={e => setFetcherTargetBoard(e.target.value)}
+                  >
+                    {trackerBoards.map(b => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* CTA */}
+                <button
+                  type="button"
+                  className="fetcher-cta-btn"
+                  onClick={handleFetchQuestions}
+                  disabled={fetcherLoading || fetcherSources.length === 0}
+                >
+                  {fetcherLoading ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="fetcher-spinner" /> Fetching & analysing questions…
+                    </span>
+                  ) : '🔍 Fetch Questions →'}
+                </button>
+
+                {fetcherLoading && (
+                  <div className="fetcher-loading-note">
+                    ⚡ Pulling from Reddit &amp; Stack Overflow, then passing through AI for extraction. This may take 15–25 seconds.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Results */}
+            {fetcherStep === 'results' && (
+              <div className="fetcher-body">
+                {/* Controls bar */}
+                <div className="fetcher-results-bar">
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {selectedFetched.size} of {fetchedQuestions.length} selected
+                  </span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button type="button" className="fetcher-mini-btn" onClick={() => setSelectedFetched(new Set(fetchedQuestions.map(q => q.id)))}>Select All</button>
+                    <button type="button" className="fetcher-mini-btn" onClick={() => setSelectedFetched(new Set())}>Clear</button>
+                    <button type="button" className="fetcher-mini-btn" onClick={() => { setFetcherStep('config'); setFetchedQuestions([]); }}>← Back</button>
+                  </div>
+                </div>
+
+                {/* Question Cards */}
+                <div className="fetcher-questions-list">
+                  {fetchedQuestions.map(q => (
+                    <div
+                      key={q.id}
+                      className={`fetcher-q-card ${selectedFetched.has(q.id) ? 'selected' : ''}`}
+                      onClick={() => setSelectedFetched(prev => {
+                        const next = new Set(prev);
+                        if (next.has(q.id)) next.delete(q.id); else next.add(q.id);
+                        return next;
+                      })}
+                    >
+                      <div className="fetcher-q-check">{selectedFetched.has(q.id) ? '✅' : '⬜'}</div>
+                      <div className="fetcher-q-content">
+                        <div className="fetcher-q-text">{q.question}</div>
+                        {q.hint && <div className="fetcher-q-hint">💡 {q.hint}</div>}
+                        <div className="fetcher-q-meta">
+                          <span className={`fetcher-source-badge ${q.source}`}>
+                            {q.source === 'reddit' ? '🟠 Reddit' : '🔵 Stack Overflow'}
+                          </span>
+                          {q.tags?.map(t => (
+                            <span key={t} className="fetcher-tag">{t}</span>
+                          ))}
+                          {q.sourceUrl && (
+                            <a href={q.sourceUrl} target="_blank" rel="noreferrer" className="fetcher-source-link" onClick={e => e.stopPropagation()}>
+                              View Source ↗
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Import CTA */}
+                <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                  <button
+                    type="button"
+                    className="fetcher-cta-btn"
+                    onClick={handleImportFetched}
+                    disabled={selectedFetched.size === 0}
+                  >
+                    📥 Import {selectedFetched.size} Question{selectedFetched.size !== 1 ? 's' : ''} to Board
+                  </button>
+                  <button type="button" className="btn btn-secondary" onClick={handleFetchQuestions} disabled={fetcherLoading}>
+                    🔄 Re-fetch
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Pomodoro Focus Timer Widget */}
+      <div
+        id="floating-focus-timer"
+        className={`focus-timer-container corner-${timerCorner}`}
+        onMouseDown={handleTimerMouseDown}
+        style={timerPosition.x !== null ? {
+          left: timerPosition.x,
+          top: timerPosition.y,
+          right: 'auto',
+          bottom: 'auto',
+          transition: 'none',
+          cursor: isDraggingTimer ? 'grabbing' : 'grab',
+          userSelect: isDraggingTimer ? 'none' : 'auto'
+        } : {
+          cursor: isDraggingTimer ? 'grabbing' : 'grab',
+          userSelect: isDraggingTimer ? 'none' : 'auto'
+        }}
+      >
+        {timerCollapsed ? (
+          <div
+            className="focus-timer-pill-collapsed"
+            onClick={() => setTimerCollapsed(false)}
+            style={{ cursor: isDraggingTimer ? 'grabbing' : 'grab' }}
+          >
+            ⏱️ {(() => {
+              const mins = Math.floor(timerSeconds / 60);
+              const secs = timerSeconds % 60;
+              return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            })()}
+          </div>
+        ) : (
+          <div className="focus-timer-card">
+            <div className="focus-timer-header" style={{ cursor: isDraggingTimer ? 'grabbing' : 'grab' }}>
+              <span>⏱️ Focus Timer ({timerMode === 'work' ? 'Study' : 'Break'})</span>
+              <button type="button" className="focus-timer-close" onClick={() => setTimerCollapsed(true)}>✕</button>
+            </div>
+
+            <div className="focus-timer-display-wrapper">
+              {(() => {
+                const radius = 56;
+                const circumference = 2 * Math.PI * radius;
+                const offset = circumference - (timerSeconds / timerTotalDuration) * circumference;
+                const mins = Math.floor(timerSeconds / 60);
+                const secs = timerSeconds % 60;
+                return (
+                  <>
+                    <svg className="focus-timer-svg" width="130" height="130">
+                      <circle className="focus-timer-circle-bg" cx="65" cy="65" r={radius} />
+                      <circle
+                        className="focus-timer-circle-progress"
+                        cx="65"
+                        cy="65"
+                        r={radius}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={offset}
+                      />
+                    </svg>
+                    <div className="focus-timer-time">
+                      {`${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Adjust Timer Duration */}
+            {!timerActive && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, padding: '4px 0' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Set Duration:</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <input
+                    type="number"
+                    min="1"
+                    max="180"
+                    value={timerMinutes}
+                    onChange={(e) => {
+                      const val = Math.max(1, parseInt(e.target.value, 10) || 25);
+                      setTimerMinutes(val);
+                      setTimerSeconds(val * 60);
+                      setTimerTotalDuration(val * 60);
+                    }}
+                    style={{
+                      width: 54,
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 6,
+                      color: 'var(--text-primary)',
+                      textAlign: 'center',
+                      padding: '4px 6px',
+                      fontFamily: 'inherit',
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}
+                  />
+                  <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>min</span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 6, width: '100%', justifyContent: 'center' }}>
+              <button
+                type="button"
+                className={`focus-timer-btn ${timerActive ? 'active' : ''}`}
+                onClick={() => {
+                  const nextActive = !timerActive;
+                  setTimerActive(nextActive);
+                  if (nextActive) {
+                    setTimerCollapsed(true);
+                    showToast('Timer started and collapsed to HUD.', 'success');
+                  }
+                }}
+              >
+                {timerActive ? 'Pause' : 'Start'}
+              </button>
+              <button
+                type="button"
+                className="focus-timer-btn"
+                onClick={() => {
+                  setTimerActive(false);
+                  const dur = timerMode === 'work' ? timerMinutes * 60 : 5 * 60;
+                  setTimerSeconds(dur);
+                  setTimerTotalDuration(dur);
+                }}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="focus-timer-btn"
+                onClick={() => {
+                  setTimerActive(false);
+                  const nextMode = timerMode === 'work' ? 'break' : 'work';
+                  const dur = nextMode === 'work' ? timerMinutes * 60 : 5 * 60;
+                  setTimerMode(nextMode);
+                  setTimerSeconds(dur);
+                  setTimerTotalDuration(dur);
+                }}
+              >
+                {timerMode === 'work' ? 'Break Mode' : 'Work Mode'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

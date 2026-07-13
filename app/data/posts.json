@@ -1,5 +1,59 @@
 [
   {
+    "id": "post_1783823559104_iw6a5",
+    "url": "https://www.linkedin.com/posts/shubham-choudhary-b4aa65194_here-is-the-most-important-interview-questions-share-7365730082037903360-H29m/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
+    "author": "Unknown Author",
+    "content": "1. Explain the main Object-Oriented Programming (OOP) concepts in Java and how you have implemented them in your Selenium framework.\n2. What is the difference between an Abstract class and an Interface in Java?\n3. What is the difference between Method Overloading and Method Overriding in Java, and provide examples of each?\n4. What is the difference between compile-time polymorphism and runtime polymorphism in Java?\n5. What is the difference between static and non-static methods/variables in Java?\n6. Explain the purpose and usage of a constructor in Java, and how it differs from a method.\n7. What is the purpose of the super keyword in Java, and how is it used?\n8. What is the difference between the 'this' and 'super' keywords in Java?\n9. Can static methods be overridden in Java, and why or why not?\n10. What is the difference between the 'final', 'finally', and 'finalize' keywords in Java?",
+    "questions": [
+      {
+        "text": ". Explain the main Object-Oriented Programming (OOP) concepts in Java and how you have implemented them in your Selenium framework.",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the difference between an Abstract class and an Interface in Java?",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the difference between Method Overloading and Method Overriding in Java, and provide examples of each?",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the difference between compile-time polymorphism and runtime polymorphism in Java?",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the difference between static and non-static methods/variables in Java?",
+        "tag": "Java"
+      },
+      {
+        "text": ". Explain the purpose and usage of a constructor in Java, and how it differs from a method.",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the purpose of the super keyword in Java, and how is it used?",
+        "tag": "Java"
+      },
+      {
+        "text": ". What is the difference between the 'this' and 'super' keywords in Java?",
+        "tag": "Java"
+      },
+      {
+        "text": ". Can static methods be overridden in Java, and why or why not?",
+        "tag": "Java"
+      },
+      {
+        "text": "0. What is the difference between the 'final', 'finally', and 'finalize' keywords in Java?",
+        "tag": "Java"
+      }
+    ],
+    "tags": [
+      "OOP",
+      "Java"
+    ],
+    "status": "To Read",
+    "addedAt": "2026-07-12T02:32:39.104Z"
+  },
+  {
     "id": "post_1783814685036_conjt",
     "url": "https://www.linkedin.com/posts/krishna-kumari-52baa4323_qa-automation-profile-interview-question-share-7481015571308994560-JpSJ/?utm_source=share&utm_medium=member_desktop&rcm=ACoAADINNtwBE8TKqJMkV6xx-7fYBaVBqizEnnM",
     "author": "Deloitte",

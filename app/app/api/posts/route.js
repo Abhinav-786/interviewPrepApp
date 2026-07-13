@@ -6,9 +6,11 @@ const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
 const TAGS_FILE = path.join(DATA_DIR, 'tags.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
+const ACTIVITY_FILE = path.join(DATA_DIR, 'activity.json');
 
 const DEFAULT_TAGS = ['Java', 'Javascript', 'Selenium', 'Automation', 'Manual', 'Playwright', 'Nightwatch', 'API Testing', 'General'];
 const DEFAULT_BOARDS = [{ id: 'default', name: 'General Prep', questions: [] }];
+const DEFAULT_ACTIVITY = { studyDates: {}, targetDate: '', dailyGoal: 5 };
 
 // Helper to ensure data directory and files exist
 function initDataFiles() {
@@ -26,6 +28,9 @@ function initDataFiles() {
   }
   if (!fs.existsSync(BOARDS_FILE)) {
     fs.writeFileSync(BOARDS_FILE, JSON.stringify(DEFAULT_BOARDS, null, 2), 'utf-8');
+  }
+  if (!fs.existsSync(ACTIVITY_FILE)) {
+    fs.writeFileSync(ACTIVITY_FILE, JSON.stringify(DEFAULT_ACTIVITY, null, 2), 'utf-8');
   }
 }
 
