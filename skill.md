@@ -9,78 +9,96 @@ This document catalogues the active **technical capabilities, skills, and integr
 | # | Skill | Focus Area | Status |
 |---|---|---|---|
 | S01 | Client-Side Bookmarklet Data Grab | Browser Redirection | ✅ Active |
-| S02 | NVIDIA meta/llama-3.1-8b-instruct AI Integration | Chat Completions | ✅ Active |
+| S02 | NVIDIA meta/llama-3.1-8b-instruct AI | Chat Completions | ✅ Active |
 | S03 | Company & Tag Suggestion Engine | AI Automation | ✅ Active |
 | S04 | AI-Consolidated Study Prep Generator | LLM Data Processing | ✅ Active |
-| S05 | Filesystem JSON Database | Data Persistence | ✅ Active |
-| S06 | Auto-Migration State Loader | Data Transition | ✅ Active |
-| S07 | Multi-Tag Filter & Chip Styling | Frontend UI/UX | ✅ Active |
-| S08 | Full Post details Modal Viewer | Frontend UI/UX | ✅ Active |
-| S09 | Inline Dashboard Editor Modal | Frontend UI/UX | ✅ Active |
-| S10 | Dynamic HSL Chip Color hashing | Frontend / CSS | ✅ Active |
+| S05 | Interactive Kanban Tracker Board | Frontend UI/UX | ✅ Active |
+| S06 | AI-Evaluated Mock Interviews | AI / Speech / Evaluation | ✅ Active |
+| S07 | 3D Flipping Flashcards | Frontend UI/UX | ✅ Active |
+| S08 | Focus Timer & Notification Engine | Audio / Notifications | ✅ Active |
+| S09 | Community QA Feed Fetcher | Data Fetching | ✅ Active |
+| S10 | Activity Heatmap & Goal Tracker | Analytics / Visualization | ✅ Active |
+| S11 | Light & Dark Theme Design Tokens | CSS Themes | ✅ Active |
+| S12 | Filesystem JSON Databases | Data Persistence | ✅ Active |
 
 ---
 
-## S01 — Client-Side Bookmarklet Data Grab
+## S05 — Interactive Kanban Tracker Board
 
 **Files:**
-* Bookmarklet Script: Compiled inside `app/app/page.js` (`copyBookmarklet`)
-* Target Endpoint: `app/app/api/receive-post-get/route.js`
+* Component: `app/components/TrackerTab.js`
+* Task Modal: `app/components/TrackerTaskModal.js`
+* Endpoint: `app/app/api/boards/route.js`
 
 **Capability:**
-Bypasses LinkedIn scrapers and CORS blocks by reading LinkedIn post HTML directly inside the user's active, authenticated browser tab and sending it to the app via a GET redirect.
-* Automatically serializes page content text, author name, and source URLs.
-* Transfers data safely across secure contexts via `window.open` redirects.
-* Caches data temporarily inside `.temp-imports/` and handles cleanups immediately after the redirect loads.
+Allows users to track study progress by organizing questions into Kanban boards split across **To Do**, **In Progress**, and **Done** columns.
+* Supports drag-and-drop or click-based status transitions.
+* Supports adding category-specific questions directly on the boards.
+* Tracks user focus: features a Focus Monitor that alerts the user with synthesized sound chimes if no card status is updated for 10 minutes.
 
 ---
 
-## S02 — NVIDIA meta/llama-3.1-8b-instruct AI Integration
+## S06 — AI-Evaluated Mock Interviews
 
 **Files:**
-* Manual Extraction: `app/app/api/extract-questions/route.js`
-* Consolidation: `app/app/api/generate-study-guide/route.js`
+* Component: `app/components/MockInterviewTab.js`
+* Evaluation Prompt: Configured inside the component calling NVIDIA completions.
 
 **Capability:**
-Leverages the NVIDIA meta/llama-3.1-8b-instruct completions API to parse raw conversation-style social media posts, stripping away greetings, personal chatter, and formatting them into structured lists of questions.
-* Configured with strict prompt patterns to preserve header sections (e.g. "Java", "WebDriver") and groups.
-* Set with 60–90 second network timeout abort signals to support large question collection arrays without timing out.
+Simulates real-world technical screens for SDET/QA candidates:
+* Generates a set of 5 random questions from a selected study board.
+* Accepts text-based or speech-to-text answers (using the Web Speech API).
+* Calls the NVIDIA Llama-3.1-8b-instruct API to grade answers, evaluate code syntax, suggest corrections, and generate a structured grading scorecard.
 
 ---
 
-## S03 — Company & Tag Suggestion Engine
+## S07 — 3D Flipping Flashcards
+
+**File:** `app/components/FlashcardsTab.js`
+
+**Capability:**
+Enables rapid self-testing using interactive 3D cards:
+* Cycles through questions in any selected study board.
+* Leverages CSS 3D transforms (`preserve-3d`, `rotateY`, `backface-visibility`) to flip cards on click.
+* Provides a quick AI Help helper directly on the card back to generate expert explanations for the question.
+
+---
+
+## S08 — Focus Timer & Notification Engine
+
+**File:** `app/components/FocusClockTab.js`
+
+**Capability:**
+A study helper representing Pomodoro mechanics:
+* Configures study sessions (e.g., 25-minute work block, 5-minute break).
+* Automatically plays sound chimes (using synthesized Web Audio API nodes) when intervals finish.
+* Sends automated browser Push Notifications (via HTML5 Notifications API) to alert the user even if they are in a different tab.
+* Triggers task-update reminders every 10 minutes of active work time.
+
+---
+
+## S09 — Community QA Feed Fetcher
 
 **Files:**
-* API Parser: `app/app/api/extract-questions/route.js`
-* Bookmarklet Parser: `app/app/api/receive-post-get/route.js`
+* Component: `app/components/CommunityQuestionsFetcher.js`
+* Endpoint: `app/app/api/fetch-community-questions/route.js`
 
 **Capability:**
-AI automatically performs entity extraction on text blocks:
-* **Company Detection**: Detects company names (e.g., Barclays, Deloitte) mentioned in the text and maps them to the post metadata.
-* **Tag Matching**: Suggests relevant tags matching your active tags list.
-* **Tag Auto-Creation**: Recommends short new tags (e.g., SQL, Jenkins, Git) if new topics are found in the questions list.
+Fetches real interview questions from developer communities:
+* Queries active Reddit and StackOverflow subreddits/tags for SDET and QA topics.
+* Filters questions based on experience level (Entry, Mid, Senior).
+* Parses title, body text, and links, allowing the user to select and import them directly into study boards.
 
 ---
 
-## S04 — AI-Consolidated Study Prep Generator
+## S10 — Activity Heatmap & Goal Tracker
 
-**File:** `app/app/api/generate-study-guide/route.js`
-
-**Capability:**
-Compiles custom-focused study prep sheets by scanning matching topics and keywords.
-* Merges raw questions collected from all matched posts.
-* Instructs the LLM completions endpoint to de-duplicate matching/repeating questions.
-* Formats the final output into a single, clean study guide grouped by sub-headings, exportable as Markdown files or clip text.
-
----
-
-## S05 — Filesystem JSON Database
-
-**File:** `app/app/api/posts/route.js`
+**Files:**
+* Dashboard Component: `app/components/DashboardTab.js`
+* Endpoint: `app/app/api/activity/route.js`
 
 **Capability:**
-Stores all application states directly inside your codebase (`app/data/`) to enable seamless cloning across devices, cross-browser data sharing, and git version tracking.
-* **`posts.json`**: Stores array of all collected posts and questions.
-* **`tags.json`**: Stores array of all registered topic tags.
-* **`config.json`**: Stores custom NVIDIA API keys (git-ignored to protect secret credentials).
-* Changes to dashboard state automatically update these filesystem JSON files in the background.
+Tracks and visualizes preparation metrics:
+* Renders a calendar heatmap tracking dates of study activity (based on tasks marked as Done).
+* Computes progress metrics and countdown gauges toward target exam dates.
+* Manages daily preparation goals (e.g., target cards completed per day).
