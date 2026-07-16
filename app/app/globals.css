@@ -1408,184 +1408,24 @@ body::after {
    ========================================== */
 
 /* ===== FLOATING FOCUS TIMER ===== */
-.focus-timer-container {
-  position: fixed;
-  z-index: 1000;
-  font-family: inherit;
-  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Snappy glide animation */
+/* ===== FOCUS CLOCK TAB PANEL ===== */
+@keyframes focusClockPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(79, 142, 247, 0)); }
+  50% { transform: scale(1.02); filter: drop-shadow(0 0 15px rgba(79, 142, 247, 0.15)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(79, 142, 247, 0)); }
 }
 
-/* Corner Snapping Anchors */
-.focus-timer-container.corner-top-right {
-  top: 24px;
-  right: 24px;
-  bottom: auto;
-  left: auto;
-}
-.focus-timer-container.corner-top-left {
-  top: 24px;
-  left: 24px;
-  bottom: auto;
-  right: auto;
-}
-.focus-timer-container.corner-bottom-right {
-  bottom: 24px;
-  right: 24px;
-  top: auto;
-  left: auto;
-}
-.focus-timer-container.corner-bottom-left {
-  bottom: 24px;
-  left: 24px;
-  top: auto;
-  right: auto;
-}
-
-.focus-timer-card {
-  width: 280px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.focus-timer-header {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
-}
-
-.focus-timer-close {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 2px;
-  font-size: 14px;
+.focus-clock-visual-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s;
-}
-.focus-timer-close:hover {
-  color: var(--text-primary);
-}
-
-.focus-timer-display-wrapper {
-  position: relative;
-  width: 130px;
-  height: 130px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: radial-gradient(circle, rgba(255,255,255,0.01) 0%, rgba(255,255,255,0.00) 70%);
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
-.focus-timer-svg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  transform: rotate(-90deg);
-  width: 100%;
-  height: 100%;
-}
-
-.focus-timer-circle-bg {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.05);
-  stroke-width: 8;
-}
-[data-theme="light"] .focus-timer-circle-bg {
-  stroke: rgba(0, 0, 0, 0.05);
-}
-
-.focus-timer-circle-progress {
-  fill: none;
-  stroke: var(--accent-blue);
-  stroke-width: 8;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 0.35s;
-  transform-origin: 50% 50%;
-}
-
-.focus-timer-time {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--text-primary);
-  z-index: 1;
-}
-
-.focus-timer-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.focus-timer-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.focus-timer-btn:hover {
-  background: var(--accent-blue-dim);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-}
-.focus-timer-btn.active {
-  background: var(--accent-blue);
-  color: #fff;
-  border-color: var(--accent-blue);
-}
-
-.focus-timer-pill-collapsed {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  padding: 8px 16px;
-  border-radius: 99px;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  font-weight: 700;
-  font-size: 13px;
-  transition: all 0.2s;
-}
-[data-theme="light"] .focus-timer-pill-collapsed {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(0, 0, 0, 0.08);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-}
-.focus-timer-pill-collapsed:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
-  border-color: var(--accent-blue);
+.focus-clock-visual-container.ticking {
+  animation: focusClockPulse 4s ease-in-out infinite;
 }
 
 /* ===== 3D FLASHCARDS ===== */
@@ -2178,138 +2018,141 @@ body::after {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MOBILE RESPONSIVENESS & MEDIA QUERIES
+   MOBILE RESPONSIVENESS — BOTTOM NAV APPROACH
 ═══════════════════════════════════════════════════════════════ */
 
-/* Mobile Header — hidden on desktop, shown on mobile */
+/* ── Bottom Navigation Bar (hidden on desktop) ── */
+.mobile-bottom-nav {
+  display: none; /* hidden by default on desktop */
+}
+
+/* ── Mobile Header (hidden on desktop) ── */
 .mobile-header {
   display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  position: sticky;
-  top: 0;
-  z-index: 900;
-  flex-shrink: 0;
 }
 
-.mobile-menu-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-primary);
-  font-size: 22px;
-  cursor: pointer;
-  padding: 6px 8px;
-  line-height: 1;
-  border-radius: 6px;
-  transition: background 0.15s;
-}
-.mobile-menu-btn:hover {
-  background: var(--bg-card);
-}
-
-/* Backdrop — only visible when sidebar is open on mobile */
-.sidebar-backdrop {
-  display: none;
-}
-
-/* ─── Breakpoint: Tablet/Mobile ≤ 992px ─────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Breakpoint: ≤ 992px  (tablets & phones)
+───────────────────────────────────────────────────────────── */
 @media (max-width: 992px) {
 
-  /* 1. Show the mobile top-bar */
+  /* 1. Hide the desktop sidebar completely */
+  .sidebar {
+    display: none !important;
+  }
+
+  /* 2. Show the mobile logo header */
   .mobile-header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 200;
+    gap: 12px;
   }
 
-  /* 2. App shell: column layout, natural body height */
+  /* 3. App shell — simple column */
   .app-container {
     flex-direction: column;
-    min-height: 100vh;
-    height: auto;      /* Let content grow naturally */
-    overflow: visible; /* Let the page body scroll */
   }
 
-  /* 3. Lock body scroll only when off-canvas menu is open */
-  .app-container.mobile-menu-open {
-    overflow: hidden;
-    height: 100dvh; /* Use dynamic viewport on mobile browsers */
-  }
-
-  /* 4. Main content: full width, natural scroll via body */
+  /* 4. Main content — full width, extra bottom padding for the nav bar */
   .main-content,
   .main-content.collapsed {
     margin-left: 0 !important;
     max-width: 100% !important;
-    padding: 20px 16px;
+    padding: 20px 16px 100px 16px; /* 100px bottom = nav bar height */
     min-height: auto;
-    overflow-y: visible; /* Page body handles scrolling */
-    flex: none;          /* Don't flex-grow; let content set height */
+    overflow-y: visible;
+    flex: 1;
   }
 
-  /* 5. Sidebar: off-canvas, slides in from left */
-  .sidebar {
-    position: fixed !important;
-    top: 0 !important;
-    left: -300px !important; /* Hidden off-screen to the left */
-    width: 280px !important;
-    height: 100vh !important;
-    z-index: 1000 !important;
-    padding: 28px 20px !important;
-    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: none;
-  }
-
-  .sidebar.open {
-    left: 0 !important;
-    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6) !important;
-  }
-
-  /* 6. Hide the sidebar's own logo (we have it in the mobile header) */
-  .sidebar .sidebar-logo {
-    display: none !important;
-  }
-
-  /* 7. Show backdrop when sidebar is open */
-  .sidebar-backdrop {
-    display: block;
+  /* 5. Show the bottom navigation bar */
+  .mobile-bottom-nav {
+    display: flex;
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(3px);
-    -webkit-backdrop-filter: blur(3px);
-    z-index: 999;
-    animation: mobileBackdropIn 0.25s ease;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 8px 4px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    gap: 0;
+    justify-content: space-around;
+    align-items: stretch;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
   }
 
-  @keyframes mobileBackdropIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+  .mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px 2px;
+    border-radius: 10px;
+    transition: background 0.15s, transform 0.15s;
+    color: var(--text-muted);
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* 8. Dashboard grid — single column */
+  .mobile-nav-item:active {
+    transform: scale(0.93);
+    background: var(--bg-card);
+  }
+
+  .mobile-nav-item.active {
+    color: var(--accent-blue);
+    background: var(--accent-blue-dim);
+  }
+
+  .mobile-nav-icon {
+    font-size: 20px;
+    line-height: 1;
+    display: block;
+  }
+
+  .mobile-nav-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+
+  /* 6. Dashboard grid — single column */
   .dashboard-grid {
     grid-template-columns: 1fr !important;
   }
 
-  /* 9. Progress Tracker Kanban — horizontal scroll with snap */
+  /* 7. Progress Tracker — horizontal swipe (Kanban style) */
   .tracker-columns {
     flex-direction: row !important;
     overflow-x: auto;
     overflow-y: visible;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 12px;
+    padding-bottom: 8px;
     gap: 14px;
   }
-  .tracker-columns::-webkit-scrollbar { height: 4px; }
+  .tracker-columns::-webkit-scrollbar { height: 3px; }
   .tracker-columns::-webkit-scrollbar-thumb {
     background: var(--text-muted);
     border-radius: 99px;
   }
   .tracker-column {
-    min-width: 82vw;
+    min-width: 83vw;
     flex-shrink: 0;
     scroll-snap-align: start;
   }
@@ -2319,31 +2162,21 @@ body::after {
     gap: 10px;
   }
 
-  /* 10. Modals — full-width, inset from edges */
-  .modal-overlay {
-    padding: 12px;
-    align-items: flex-end; /* Sheet slides up from bottom feel */
-  }
+  /* 8. Modals */
   .modal, .modal-content, .fetcher-modal {
-    width: 100% !important;
-    max-width: 100% !important;
-    max-height: 92vh;
-    border-radius: 16px 16px 0 0;
-    margin: 0;
+    width: 95% !important;
+    max-height: 88vh;
+    margin: auto;
   }
-  .fetcher-exp-tiles {
-    grid-template-columns: 1fr;
-  }
-  .fetcher-sources {
-    flex-direction: column;
-  }
+  .fetcher-exp-tiles { grid-template-columns: 1fr; }
+  .fetcher-sources   { flex-direction: column; }
   .fetcher-results-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
 
-  /* 11. Flashcards */
+  /* 9. Flashcards */
   .flashcard-container {
     width: 100% !important;
     max-width: 100%;
@@ -2354,41 +2187,20 @@ body::after {
     justify-content: center;
     gap: 8px;
   }
-
-  /* 12. Page headers */
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  /* 13. Focus timer — keep in corner but adjust on very small screens */
-  .focus-timer-widget {
-    max-width: calc(100vw - 24px);
-  }
 }
 
-/* ─── Breakpoint: Small phones ≤ 480px ──────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   Breakpoint: ≤ 480px  (small phones)
+───────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .mobile-header {
-    padding: 12px 16px;
-  }
+  .mobile-header { padding: 12px 16px; }
   .main-content,
-  .main-content.collapsed {
-    padding: 14px 12px;
-  }
-  .tracker-column {
-    min-width: 90vw;
-  }
-  .flashcard-inner h3 {
-    font-size: 17px;
-  }
-  .stat-value {
-    font-size: 26px;
-  }
-  .btn {
-    padding: 9px 14px;
-    font-size: 13px;
-  }
+  .main-content.collapsed { padding: 14px 12px 100px 12px; }
+  .tracker-column { min-width: 91vw; }
+  .mobile-nav-icon { font-size: 18px; }
+  .mobile-nav-label { font-size: 9px; }
+  .flashcard-inner h3 { font-size: 17px; }
+  .stat-value { font-size: 26px; }
+  .btn { padding: 9px 14px; font-size: 13px; }
 }
 
